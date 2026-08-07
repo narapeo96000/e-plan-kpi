@@ -1,0 +1,17 @@
+# Real database credentials — never commit
+db.php
+
+# Full DB data dump (contains real user data + password hashes)
+office_budget_edu_db.sql
+
+# User-uploaded files
+uploads/
+
+# OS / editor cruft
+Thumbs.db
+.DS_Store
+*.log
+*.tmp
+
+# Local PHP / server artifacts
+*.ini.bak
