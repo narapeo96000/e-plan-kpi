@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>e-PLAN | ระบบติดตามและรายงานผลการขับเคลื่อนแผนพัฒนาการศึกษา</title>
+<meta name="description" content="e-PLAN — ระบบติดตามและรายงานผลการขับเคลื่อนตามแผนพัฒนาการศึกษาจังหวัดนราธิวาส (Budget, Project & OKR Monitoring with KPI)">
+<style>
+  :root{
+    --primary:#731e8a; --secondary:#f100f5; --ink:#1f2937; --muted:#6b7280; --bg:#f8f7fc;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI','Sarabun',system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  header.hero{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;padding:72px 0 64px;text-align:center}
+  header.hero h1{font-size:2.4rem;font-weight:800;letter-spacing:.5px}
+  header.hero p{margin-top:12px;font-size:1.1rem;opacity:.95}
+  .badge{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);padding:4px 14px;border-radius:999px;font-size:.82rem;margin-top:18px}
+  section{padding:44px 0}
+  section h2{font-size:1.5rem;font-weight:700;margin-bottom:18px;color:var(--primary)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:8px}
+  .card{background:#fff;border:1px solid #eee;border-radius:16px;padding:22px;box-shadow:0 4px 14px rgba(115,30,138,.06)}
+  .card h3{font-size:1.05rem;margin-bottom:8px;color:var(--ink)}
+  .card p{color:var(--muted);font-size:.94rem}
+  .card .ico{font-size:1.6rem;margin-bottom:8px}
+  ul.roles{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  ul.roles li{background:#fff;border:1px solid #eee;border-radius:12px;padding:14px 16px;font-size:.94rem}
+  ul.roles li b{color:var(--primary)}
+  .stack{display:flex;flex-wrap:wrap;gap:10px}
+  .stack span{background:#fff;border:1px solid #e2d9f0;color:var(--primary);padding:6px 14px;border-radius:999px;font-size:.85rem;font-weight:600}
+  footer{background:#141026;color:#c9c3dd;padding:34px 0;text-align:center;font-size:.9rem}
+  footer a{color:#fff}
+  .btn{display:inline-block;background:#fff;color:var(--primary);font-weight:700;padding:12px 26px;border-radius:999px;text-decoration:none;margin-top:22px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  @media(max-width:600px){header.hero{padding:52px 0}header.hero h1{font-size:1.7rem}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>e-PLAN</h1>
+    <p>ระบบติดตามและรายงานผลการขับเคลื่อนตามแผนพัฒนาการศึกษาจังหวัดนราธิวาส<br>(Budget &bull; Project &bull; OKR Monitoring with KPI)</p>
+    <span class="badge">e-plan-kpi &middot; Narathiwat Education</span>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>เกี่ยวกับระบบ</h2>
+    <p style="color:var(--muted);max-width:760px">
+      ระบบสำหรับหน่วยงานทางการศึกษาจังหวัดนราธิวาส ใช้ติดตามโครงการ งบประมาณ และผลการดำเนินงาน
+      ตามยุทธศาสตร์พร้อมการกำหนดตัวชี้วัด KPI ร่วมระดับจังหวัด/หน่วยงาน และการรายงานความก้าวหน้าแบบ OKR
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>คุณสมบัติหลัก</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">📋</div><h3>จัดการโครงการ</h3><p>เพิ่ม แก้ไข รายงานผลโครงการ พร้อมแนบเอกสาร รูปภาพ และวิดีโอ ตามยุทธศาสตร์</p></div>
+      <div class="card"><div class="ico">💰</div><h3>ติดตามงบประมาณ</h3><p>งบจัดสรร งบใช้จ่าย สัดส่วนการใช้จ่าย และการเบิกจ่ายแบบรายการ</p></div>
+      <div class="card"><div class="ico">📐</div><h3>ตัวชี้วัด KPI</h3><p>กำหนด KPI ร่วมสำหรับจังหวัด/หน่วยงาน พร้อมค่าเป้าหมายร้อยละและตัวชี้วัดความสำเร็จ</p></div>
+      <div class="card"><div class="ico">🎯</div><h3>OKR</h3><p>ติดตามความก้าวหน้าของหน่วยงานผ่าน Objectives &amp; Key Results</p></div>
+      <div class="card"><div class="ico">📊</div><h3>Dashboard</h3><p>ภาพรวมสัดส่วนการดำเนินโครงการ กราฟตามยุทธศาสตร์ และรายงานส่งออก PDF/Excel</p></div>
+      <div class="card"><div class="ico">🔐</div><h3>หลายระดับสิทธิ์</h3><p>Admin, ผู้กำหนด KPI, ผู้ประสานงานหน่วยงาน และผู้ใช้ทั่วไป พร้อมประวัติการแก้ไข</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>บทบาทผู้ใช้</h2>
+    <ul class="roles">
+      <li><b>ผู้ดูแลระบบ (admin)</b> — เข้าถึงทุกอย่าง จัดการผู้ใช้และข้อมูลทั้งหมด</li>
+      <li><b>ผู้กำหนดตัวชี้วัด KPI (plan)</b> — กำหนดตัวชี้วัดร่วมสำหรับจังหวัด/หน่วยงาน</li>
+      <li><b>ผู้ประสานงานหน่วยงาน (office)</b> — จัดการโครงการของหน่วยงานตนเอง และแก้ไขแทนเจ้าของ</li>
+      <li><b>ผู้ใช้ทั่วไป (user)</b> — เพิ่ม/แก้ไข/รายงานเฉพาะโครงการของตนเอง</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>เทคโนโลยี</h2>
+    <div class="stack">
+      <span>PHP 5.6+</span><span>MySQL 5.7</span><span>Bootstrap 5.3</span><span>Tailwind CSS</span><span>Vanilla JS</span><span>mysqli / PDO</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>e-PLAN &middot; ระบบติดตามและรายงานผลการขับเคลื่อนตามแผนพัฒนาการศึกษา</p>
+    <p style="margin-top:8px"><a href="https://github.com/narapeo96000/e-plan-kpi">ดู source code บน GitHub →</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
