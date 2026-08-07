@@ -329,4 +329,19 @@ CREATE TABLE IF NOT EXISTS `kpi_definitions` (
   KEY `idx_kpi_scope` (`scope_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- -----------------------------------------------------------------------------
+-- 7) project_kpis: 1-to-many mapping between projects and shared KPI indicators
+--    (1 project can be aligned with many KPI definitions)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `project_kpis` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `project_id` INT UNSIGNED NOT NULL,
+  `kpi_id` INT UNSIGNED NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_project_kpi` (`project_id`,`kpi_id`),
+  KEY `idx_pk_kpi` (`kpi_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SELECT 'migration_upgrade.sql applied successfully' AS status;

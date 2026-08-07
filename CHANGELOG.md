@@ -2,6 +2,13 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-08-07 12:07 — กำหนดความสอดคล้องตัวชี้วัดร่วม KPI ของจังหวัด (1 โครงการ = หลาย KPI)
+- เพิ่มตาราง `project_kpis` (project_id ↔ kpi_id, unique ต่อคู่) รองรับ 1 โครงการสอดคล้องได้หลาย KPI — ใน `migration_upgrade.sql` + `office_budget_edu_db.sql`
+- `project_form.php`: หมวดใหม่ "🎯 ความสอดคล้องตัวชี้วัดร่วม KPI ของจังหวัด" เลือกแบบ checkbox ได้หลายรายการ (โหลดเฉพาะ KPI ที่ active ในปีงบประมาณของโครงการ) + แสดงใน Preview
+- `project_save.php`: sync ความสัมพันธ์ KPI (ลบเก่า + เพิ่มใหม่ใน transaction เดียวกัน) + บันทึก `kpi_ids` ใน audit log
+- `pview_project.php`: แสดง badge รายชื่อ KPI ที่โครงการสอดคล้องในหน้า "ภาพรวมโครงการ"
+- `projects.php`: แสดงป้าย 📐 KPI ในรายการโครงการ + ค้นหาด้วยชื่อ KPI ได้
+
 ## 2026-08-07 11:56 — จัดทำบันทึกการปรับปรุง (Changelog) + เปิด GitHub Pages
 - สร้างไฟล์ `CHANGELOG.md` เพื่อบันทึกทุกการปรับปรุง/แก้ไขพร้อมวันเวลาและรายละเอียด
 - เปิดใช้งาน GitHub Pages สำเร็จ: `https://narapeo96000.github.io/e-plan-kpi/` (source = `main` / `docs`)

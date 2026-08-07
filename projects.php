@@ -37,7 +37,7 @@ if (isLoggedIn() && !isAdminOrPlan()) {
 
 if ($searchQuery !== '') {
     $escapedSearch = $conn->real_escape_string($searchQuery);
-    $conditions[] = "(p.title LIKE '%" . $escapedSearch . "%' OR p.department LIKE '%" . $escapedSearch . "%' OR p.owner_name LIKE '%" . $escapedSearch . "%' OR si.issue_name LIKE '%" . $escapedSearch . "%' OR a.agency_name LIKE '%" . $escapedSearch . "%' OR p.id IN (SELECT psi.project_id FROM project_strategic_issues psi JOIN strategic_issues si2 ON si2.id = psi.strategic_issue_id WHERE psi.source = 'project' AND si2.issue_name LIKE '%" . $escapedSearch . "%'))";
+    $conditions[] = "(p.title LIKE '%" . $escapedSearch . "%' OR p.department LIKE '%" . $escapedSearch . "%' OR p.owner_name LIKE '%" . $escapedSearch . "%' OR si.issue_name LIKE '%" . $escapedSearch . "%' OR a.agency_name LIKE '%" . $escapedSearch . "%' OR p.id IN (SELECT psi.project_id FROM project_strategic_issues psi JOIN strategic_issues si2 ON si2.id = psi.strategic_issue_id WHERE psi.source = 'project' AND si2.issue_name LIKE '%" . $escapedSearch . "%') OR p.id IN (SELECT pk.project_id FROM project_kpis pk JOIN kpi_definitions k ON k.id = pk.kpi_id WHERE k.kpi_name LIKE '%" . $escapedSearch . "%'))";
 }
 if ($filterSchool !== '') {
     $conditions[] = "p.agency_id = " . (int)$filterSchool;
@@ -76,7 +76,11 @@ $sql = "
            COALESCE((SELECT GROUP_CONCAT(si2.issue_name ORDER BY si2.issue_no SEPARATOR ', ')
                      FROM project_strategic_issues psi
                      JOIN strategic_issues si2 ON si2.id = psi.strategic_issue_id
-                     WHERE psi.source = 'project' AND psi.project_id = p.id), si.issue_name) AS strategy_names
+                     WHERE psi.source = 'project' AND psi.project_id = p.id), si.issue_name) AS strategy_names,
+           COALESCE((SELECT GROUP_CONCAT(k.kpi_name SEPARATOR ', ')
+                     FROM project_kpis pk
+                     JOIN kpi_definitions k ON k.id = pk.kpi_id
+                     WHERE pk.project_id = p.id), '') AS kpi_names
     FROM projects p
     LEFT JOIN agencies a ON a.id = p.agency_id
     LEFT JOIN strategic_issues si ON si.id = p.strategy_id
@@ -326,6 +330,11 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
                                             <?php endif; ?>
                                             <?php if ((int)$project['is_office_total'] === 1): ?>
                                                 <div class="badge bg-success-subtle text-success mt-2">📊 สรุปงบรวม</div>
+                                            <?php endif; ?>
+                                            <?php if (!empty($project['kpi_names'])): ?>
+                                                <div class="project-meta-row">
+                                                    <span class="project-meta-badge" title="ตัวชี้วัด KPI ที่สอดคล้อง">📐 <?= htmlspecialchars($project['kpi_names']) ?></span>
+                                                </div>
                                             <?php endif; ?>
                                         </td>
                                         <td>

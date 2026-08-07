@@ -73,6 +73,17 @@ if (empty($strategyNames)) {
 }
 $project['strategic_links'] = implode(', ', $strategyNames);
 
+// Load KPI alignment (1-to-many via project_kpis) — main projects only
+$kpiLinks = array();
+if (!$fromOkr) {
+    $kRes = $conn->query("SELECT k.kpi_name, k.target_percent, k.scope_type FROM project_kpis pk JOIN kpi_definitions k ON k.id = pk.kpi_id WHERE pk.project_id = " . (int)$id . " ORDER BY k.id ASC");
+    if ($kRes) {
+        while ($kRow = $kRes->fetch_assoc()) {
+            $kpiLinks[] = $kRow;
+        }
+    }
+}
+
 $objectives = [];
 if ($fromOkr) {
     $oRes = $conn->query("SELECT * FROM okr_objectives WHERE project_id = $id ORDER BY id ASC");
@@ -267,6 +278,18 @@ if (!$fromOkr) {
               <div class="border rounded-3 p-3 h-100">
                 <div class="text-muted small mb-1">ยุทธศาสตร์ / Link ที่เกี่ยวข้อง</div>
                 <div class="fw-semibold"><?= htmlspecialchars($project['strategic_links'] ?: '-') ?></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="border rounded-3 p-3 h-100">
+                <div class="text-muted small mb-1">ตัวชี้วัด KPI ที่สอดคล้อง</div>
+                <?php if (empty($kpiLinks)): ?>
+                  <div class="fw-semibold">-</div>
+                <?php else: ?>
+                  <?php foreach ($kpiLinks as $kn): ?>
+                    <span class="badge bg-primary-subtle text-primary-emphasis me-1 mb-1"><?= htmlspecialchars($kn['kpi_name']) ?></span>
+                  <?php endforeach; ?>
+                <?php endif; ?>
               </div>
             </div>
             <div class="col-12">

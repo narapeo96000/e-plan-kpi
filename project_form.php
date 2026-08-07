@@ -101,6 +101,17 @@ if (isset($_GET['id'])) {
     }
 }
 
+// ===== ตัวชี้วัดร่วม KPI (1 โครงการ สอดคล้องได้หลาย KPI) =====
+$kpiFormYear = $isEdit && !empty($project['fiscal_year']) ? $project['fiscal_year'] : $fiscal_year;
+$kpiDefs = array();
+try {
+    $stmtK = $pdo->prepare("SELECT id, kpi_name, target_percent, scope_type, success_indicator FROM kpi_definitions WHERE status = 'active' AND fiscal_year = ? ORDER BY id ASC");
+    $stmtK->execute(array($kpiFormYear));
+    $kpiDefs = $stmtK->fetchAll();
+} catch (Exception $e) {
+    $kpiDefs = array();
+}
+
 // Default values (PHP 5.6 compatible)
 $defaults = array();
 $defaults['project_id'] = isset($project['project_id']) ? $project['project_id'] : ($isEdit ? '' : generateProjectId());
@@ -121,6 +132,18 @@ if ($isEdit) {
 }
 if (empty($defaults['strategic_issue_ids']) && !empty($defaults['strategy_id'])) {
     $defaults['strategic_issue_ids'][] = (int)$defaults['strategy_id'];
+}
+$defaults['kpi_ids'] = array();
+if ($isEdit) {
+    try {
+        $stmtK = $pdo->prepare("SELECT kpi_id FROM project_kpis WHERE project_id = ?");
+        $stmtK->execute(array((int)$project['id']));
+        while ($kr = $stmtK->fetch()) {
+            $defaults['kpi_ids'][] = (int)$kr['kpi_id'];
+        }
+    } catch (Exception $e) {
+        // junction table unavailable
+    }
 }
 $defaults['status'] = isset($project['status']) ? $project['status'] : 'ยังไม่เริ่ม';
 $defaults['owner_name'] = isset($project['owner_name']) ? $project['owner_name'] : currentName();
@@ -154,6 +177,13 @@ if ($isEdit) {
 
 // Export defaults as JS-safe JSON
 $defaultsJson = json_encode($defaults, JSON_UNESCAPED_UNICODE);
+
+// KPI name map for the preview (id => kpi_name)
+$kpiNameMap = array();
+foreach ($kpiDefs as $k) {
+    $kpiNameMap[(int)$k['id']] = $k['kpi_name'];
+}
+$kpiNameMapJson = json_encode($kpiNameMap, JSON_UNESCAPED_UNICODE);
 
 function selected($a, $b) { return (string)$a === (string)$b ? 'selected' : ''; }
 function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
@@ -332,6 +362,41 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                         <div class="form-text">เลือกจากรายการ หรือเลือก "เพิ่มแหล่งงบประมาณใหม่" เพื่อพิมพ์เอง</div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ===== หมวด 1.5: ความสอดคล้องตัวชี้วัดร่วม KPI (1-to-many) ===== -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h3 class="h5 fw-bold mb-3">🎯 ความสอดคล้องตัวชี้วัดร่วม KPI ของจังหวัด</h3>
+                <div class="small text-muted mb-3">เลือกตัวชี้วัด KPI ร่วมที่โครงการนี้สอดคล้อง/สนับสนุน — 1 โครงการสามารถสอดคล้องได้มากกว่า 1 KPI</div>
+                <?php if (empty($kpiDefs)): ?>
+                    <div class="alert alert-light border py-2 small mb-0">
+                        ยังไม่มีตัวชี้วัด KPI ที่ใช้งานในปีงบประมาณ <?= htmlspecialchars($kpiFormYear) ?> — ผู้กำหนดตัวชี้วัด (<?= roleLabel('plan') ?>) ต้องเพิ่มก่อนผ่านเมนู "กำหนดตัวชี้วัด KPI"
+                    </div>
+                <?php else: ?>
+                    <div class="row g-3">
+                        <?php foreach ($kpiDefs as $k): ?>
+                            <div class="col-12 col-md-6">
+                                <div class="form-check border rounded-3 p-3 bg-light h-100">
+                                    <input class="form-check-input kpi-check" type="checkbox" name="kpi_ids[]" value="<?= (int)$k['id'] ?>" id="kpi_<?= (int)$k['id'] ?>" <?= in_array((int)$k['id'], $defaults['kpi_ids']) ? 'checked' : '' ?>>
+                                    <label class="form-check-label w-100" for="kpi_<?= (int)$k['id'] ?>">
+                                        <div class="fw-semibold">
+                                            <?= htmlspecialchars($k['kpi_name']) ?>
+                                            <span class="badge bg-primary-subtle text-primary-emphasis ms-1"><?= htmlspecialchars(rtrim(rtrim(number_format((float)$k['target_percent'], 2), '0'), '.')) ?>%</span>
+                                        </div>
+                                        <?php if (!empty($k['success_indicator'])): ?>
+                                            <div class="small text-muted mt-1"><?= htmlspecialchars($k['success_indicator']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if ($k['scope_type'] === 'province'): ?>
+                                            <div class="small text-muted mt-1">ระดับ: จังหวัด</div>
+                                        <?php endif; ?>
+                                    </label>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -592,6 +657,8 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
 // ===== Budget auto calc =====
 let manualProgress = false;
 
+const kpiNameMap = <?= $kpiNameMapJson ?>;
+
 function autoCalcProgress() {
     if (manualProgress) return;
     const allocated = parseFloat(document.getElementById('budgetAllocated').value) || 0;
@@ -701,6 +768,7 @@ function showPreview() {
     html += '<tr><td>ปีงบประมาณ</td><td>' + esc(d.fiscal_year) + '</td></tr>';
     html += '<tr><td>ชื่อโครงการ</td><td class="fw-semibold">' + esc(d.title) + '</td></tr>';
     html += '<tr><td>ยุทธศาสตร์</td><td>' + esc(getCheckedStrategies() || '-') + '</td></tr>';
+    html += '<tr><td>ตัวชี้วัด KPI ที่สอดคล้อง</td><td>' + esc(getCheckedKpis() || '-') + '</td></tr>';
     html += '<tr><td>สถานะโครงการ</td><td><span class="badge bg-primary">' + esc(d.status) + '</span></td></tr>';
     html += '<tr><td>ผู้รับผิดชอบหลัก</td><td>' + esc(d.owner_name) + '</td></tr>';
     html += '<tr><td>ผู้รับผิดชอบร่วม</td><td>' + esc(d.co_owner || '-') + '</td></tr>';
@@ -781,6 +849,15 @@ function getCheckedStrategies() {
         const wrap = c.closest('.form-check');
         const label = wrap ? wrap.querySelector('label') : null;
         if (label) names.push(label.textContent.trim());
+    });
+    return names.join(', ');
+}
+
+function getCheckedKpis() {
+    const checks = document.querySelectorAll('input[name="kpi_ids[]"]:checked');
+    const names = [];
+    checks.forEach(function (c) {
+        if (kpiNameMap[c.value]) names.push(kpiNameMap[c.value]);
     });
     return names.join(', ');
 }

@@ -147,6 +147,17 @@ if (empty($strategicIssueIds) && $strategyId) {
 }
 $strategyId = !empty($strategicIssueIds) ? min($strategicIssueIds) : $strategyId;
 
+// Multi-KPI alignment (1-to-many via project_kpis)
+$kpiIds = array();
+if (isset($_POST['kpi_ids']) && is_array($_POST['kpi_ids'])) {
+    foreach ($_POST['kpi_ids'] as $kid) {
+        $kid = (int)$kid;
+        if ($kid > 0) {
+            $kpiIds[$kid] = $kid;
+        }
+    }
+}
+
 try {
     // Use PDO for transaction
     if (!$pdo) {
@@ -242,6 +253,14 @@ try {
         $insStmt->execute(array($projectId, $sid));
     }
 
+    // ===== Sync 1-to-many KPI alignment =====
+    $delKpiStmt = $pdo->prepare("DELETE FROM project_kpis WHERE project_id = ?");
+    $delKpiStmt->execute(array($projectId));
+    $insKpiStmt = $pdo->prepare("INSERT IGNORE INTO project_kpis (project_id, kpi_id) VALUES (?, ?)");
+    foreach ($kpiIds as $kid) {
+        $insKpiStmt->execute(array($projectId, $kid));
+    }
+
     // ===== Audit log =====
     $newValues = array(
         'project_id' => $projectIdField,
@@ -255,6 +274,7 @@ try {
         'progress' => $progress,
         'budget_source' => $budgetSource,
         'result_status' => $resultStatus,
+        'kpi_ids' => array_values($kpiIds),
         'edited_by' => $currentUser,
         'edited_on_behalf' => $editedOnBehalf,
     );
