@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แผนปฏิบัติการและแนวทางการพัฒนา - จังหวัดนราธิวาส</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased custom-scrollbar">
+
+    <header class="bg-gradient-to-r from-purple-800 to-indigo-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-white p-2 rounded-full shadow-inner">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Seal_of_Narathiwat.png/120px-Seal_of_Narathiwat.png" alt="โลโก้จังหวัดนราธิวาส" class="h-12 w-12 object-contain" onerror="this.src='https://placehold.co/100x100/ffffff/4f46e5?text=นธ'">
+                    </div>
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-bold tracking-tight">เป้าประสงค์ ตัวชี้วัด และแนวทางการพัฒนา</h1>
+                        <p class="text-indigo-100 text-sm mt-1"><i class="fa-solid fa-location-dot mr-2"></i>จังหวัดนราธิวาส (Narathiwat Educational Projects)</p>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="w-full md:w-1/3 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="searchInput" class="block w-full pl-10 pr-3 py-2 border border-transparent rounded-full leading-5 bg-white bg-opacity-20 text-white placeholder-indigo-100 focus:outline-none focus:bg-white focus:text-gray-900 focus:placeholder-gray-400 focus:ring-0 sm:text-sm transition duration-150 ease-in-out backdrop-blur-sm" placeholder="ค้นหา โครงการ, หน่วยงาน, หรือคำค้นอื่นๆ...">
+                    <button id="clearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden cursor-pointer text-gray-400 hover:text-gray-600 focus:outline-none">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="bg-blue-100 text-blue-600 p-3 rounded-lg"><i class="fa-solid fa-folder-open text-xl"></i></div>
+                <div>
+                    <p class="text-sm text-slate-500">จำนวนโครงการ</p>
+                    <p class="text-xl font-bold text-slate-800" id="totalProjects">0</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="bg-green-100 text-green-600 p-3 rounded-lg"><i class="fa-solid fa-money-bill-wave text-xl"></i></div>
+                <div>
+                    <p class="text-sm text-slate-500">งบประมาณรวม</p>
+                    <p class="text-lg font-bold text-slate-800" id="totalBudget">0 ฿</p>
+                </div>
+            </div>
+             <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="bg-purple-100 text-purple-600 p-3 rounded-lg"><i class="fa-solid fa-bullseye text-xl"></i></div>
+                <div>
+                    <p class="text-sm text-slate-500">ยุทธศาสตร์</p>
+                    <p class="text-xl font-bold text-slate-800">5</p>
+                </div>
+            </div>
+             <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="bg-orange-100 text-orange-600 p-3 rounded-lg"><i class="fa-solid fa-building text-xl"></i></div>
+                <div>
+                    <p class="text-sm text-slate-500">หน่วยงานรับผิดชอบ</p>
+                    <p class="text-xl font-bold text-slate-800">หลากหลาย</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="noResults" class="hidden flex flex-col items-center justify-center py-12 text-slate-500">
+            <i class="fa-solid fa-folder-open text-6xl mb-4 text-slate-300"></i>
+            <p class="text-lg font-medium">ไม่พบข้อมูลที่ค้นหา</p>
+            <p class="text-sm">ลองใช้คำค้นหาอื่น เช่น ชื่อหน่วยงาน หรือ คำสำคัญในโครงการ</p>
+        </div>
+
+        <!-- Container for dynamically generated project cards -->
+        <div id="projectsContainer" class="space-y-6">
+            <!-- Cards will be injected here via JavaScript -->
+        </div>
+
+    </main>
+
+    <script>
+        // Data structure converted from the provided Markdown table
+        const projectData = [
+            // ยุทธศาสตร์ที่ 1
+            {
+                id: 1,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 1 การพัฒนาผู้เรียนเป็นศูนย์กลางและการศึกษาที่ครอบคลุมทุกกลุ่ม",
+                kpiMain: "ตัวชี้วัดที่ 1.ร้อยละของผู้เรียนที่มีระดับการพัฒนาสมรรถนะตามช่วงวัยตามเกณฑ์ที่กำหนด",
+                name: "โครงการมหกรรมสัปดาห์วิทยาศาสตร์ (Science Week INNOTECH 2026)",
+                target: "ครู สกร. นักศึกษา สกร. เยาวชน จากทุกสังกัดและประชาชนทั่วไปจำนวน 500 คน",
+                activities: "1) การประชุมเตรียมความพร้อมก่อนจัดกิจกรรม\n2) กิจกรรมมหกรรมสัปดาห์วิทยาศาสตร์\n3) ประชุมถอดบทเรียน",
+                outcome: "1) มีแผนการจัดกิจกรรม\n2) ผู้เข้าร่วมการเเสดงศักยภาพ\n3)ได้รับความร่วมมือจากหน่วยงานภาคีเครือข่าย",
+                indicator: "1) จำนวนแผน 1 แผน\n2) ผู้เข้าร่วมไม่น้อยกว่าร้อยละ 80\n3) เครือข่ายไม่น้อยกว่า 3 เครือข่าย",
+                budget: 160000,
+                agency: "ศูนย์วิทยาศาสตร์เพื่อการศึกษานราธิวาส"
+            },
+            {
+                id: 2,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 1 การพัฒนาผู้เรียนเป็นศูนย์กลางและการศึกษาที่ครอบคลุมทุกกลุ่ม",
+                kpiMain: "ตัวชี้วัดที่ 1.ร้อยละของผู้เรียนที่มีระดับการพัฒนาสมรรถนะตามช่วงวัยตามเกณฑ์ที่กำหนด",
+                name: "โครงการNarasciโครงงานวิทยาศาสตร์สร้างสรรค์สู่ชุมชน",
+                target: "ครู สกร. นักศึกษา สกร. เยาวชน จากทุกสังกัดและประชาชนทั่วไปจำนวน 280 คน",
+                activities: "1.อบรมเชิงปฏิบัติการจัดทำโครงงาน\n2.การประกวดระดับพื้นที่\n3.ลงพื้นที่ถอดบทเรียน\n4.ประกวดระดับประเทศ",
+                outcome: "1) มีความรู้และทักษะในการออกแบบโครงงาน\n2) แสดงศักยภาพด้านวิทย์และนวัตกรรม\n3) มีประสบการณ์ระดับประเทศและต่อยอดได้",
+                indicator: "ร้อยละ 80 มีความรู้และทักษะ\nร้อยละ 80 แสดงศักยภาพ\nร้อยละ 20 มีประสบการณ์ต่อยอดสู่ชุมชน",
+                budget: 160000,
+                agency: "ศูนย์วิทยาศาสตร์เพื่อการศึกษานราธิวาส"
+            },
+            {
+                id: 3,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 1 การพัฒนาผู้เรียนเป็นศูนย์กลางและการศึกษาที่ครอบคลุมทุกกลุ่ม",
+                kpiMain: "ตัวชี้วัดที่ 1.ร้อยละของผู้เรียนที่มีระดับการพัฒนาสมรรถนะตามช่วงวัยตามเกณฑ์ที่กำหนด",
+                name: "โครงการส่งเสริมทักษะวิชาวิทยาศาสตร์ คณิตศาสตร์ อังกฤษให้กับนักเรียนชั้น ม.3 (SME)",
+                target: "นักเรียนชั้น ม.3 ห้องเรียนสาธิต (SME) ท.1 จำนวน 25 คน",
+                activities: "กิจกรรมส่งเสริมทักษะวิชาวิทยาศาสตร์ คณิตศาสตร์ และภาษาอังกฤษ",
+                outcome: "1. นักเรียนได้รับประสบการณ์หลากหลายรูปแบบ\n2. นักเรียนเรียนรู้อย่างมีความสุข",
+                indicator: "นักเรียนได้รับประสบการณ์ระดับดีขึ้นไป ร้อยละ 80",
+                budget: 100000,
+                agency: "เทศบาลเมืองนราธิวาส"
+            },
+            {
+                id: 4,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 1 การพัฒนาผู้เรียนเป็นศูนย์กลางและการศึกษาที่ครอบคลุมทุกกลุ่ม",
+                kpiMain: "ตัวชี้วัดที่ 1.ร้อยละของผู้เรียนที่มีระดับการพัฒนาสมรรถนะตามช่วงวัยตามเกณฑ์ที่กำหนด",
+                name: "โครงการสถานพัฒนาเด็กปฐมวัยต้นแบบสุขภาพดี Anak sihat แบบบูรณาการ",
+                target: "สถานพัฒนาเด็กปฐมวัย 3 โซน (บาเจาะ, แว้ง, สุคิริน), ครู, เด็ก 0-5 ปี, ผู้ปกครอง",
+                activities: "1. ประชุมเครือข่ายสร้างทีม CFT\n2. อบรม Parenting Program\n3. นิเทศติดตาม\n4. แลกเปลี่ยนถอดบทเรียน",
+                outcome: "1. เด็กพัฒนาการสมวัย\n2. สูงดีสมส่วน\n3. ฟันดีไม่มีผุ",
+                indicator: "1. พัฒนาการสมวัย ร้อยละ 88\n2. สูงดีสมส่วน ร้อยละ 66\n3. ตรวจช่องปาก ร้อยละ 55",
+                budget: 90675,
+                agency: "สำนักงานสาธารณสุขจังหวัดนราธิวาส"
+            },
+            {
+                id: 6,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 1 การพัฒนาผู้เรียนเป็นศูนย์กลางและการศึกษาที่ครอบคลุมทุกกลุ่ม",
+                kpiMain: "ตัวชี้วัดที่ 1.ร้อยละของผู้เรียนที่มีระดับการพัฒนาสมรรถนะตามช่วงวัยตามเกณฑ์ที่กำหนด",
+                name: "โครงการเฝ้าระวัง ส่งเสริมสุขภาพและการจัดการสุขาภิบาลน้ำสะอาดในโรงเรียนพระราชดำริ",
+                target: "นักเรียนโรงเรียนพระราชดำริ 32 แห่ง, ผู้ปกครอง, ผู้บริหาร, ครู, จนท.สาธารณสุข",
+                activities: "1. ส่งเสริมทันตสุขภาพ\n2. รวมพลคนรักษ์ฟัน\n3. แปรงฟันคุณภาพ\n4. ตรวจวิเคราะห์คุณภาพน้ำบริโภค",
+                outcome: "1. ภาคีมีส่วนร่วมแก้ปัญหาสุขภาพ\n2. เด็กเข้าถึงบริการสุขภาพ",
+                indicator: "1. ฟันดีไม่มีผุ มากกว่าร้อยละ 50\n2. โรงเรียนผ่านเกณฑ์คุณภาพน้ำประปาดื่มได้",
+                budget: 722300,
+                agency: "สำนักงานสาธารณสุขจังหวัดนราธิวาส"
+            },
+            {
+                id: 11,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 1 การพัฒนาผู้เรียนเป็นศูนย์กลางและการศึกษาที่ครอบคลุมทุกกลุ่ม",
+                kpiMain: "ตัวชี้วัดที่ 1.ร้อยละของผู้เรียนที่มีระดับการพัฒนาสมรรถนะตามช่วงวัยตามเกณฑ์ที่กำหนด",
+                name: "โครงการสนับสนุนค่าใช้จ่ายในการจัดการศึกษาตั้งแต่ระดับอนุบาลจนจบการศึกษาขั้นพื้นฐาน",
+                target: "นักศึกษา สกร. 15,451 คน (ประชาชนทั่วไป, ผู้พิการ, ปอเนาะ, ทหาร, ผู้ต้องขัง)",
+                activities: "1. จัดการเรียนการสอน\n2. จัดซื้อหนังสือเรียน\n3. กิจกรรมพัฒนาคุณภาพผู้เรียน",
+                outcome: "นักศึกษาได้รับการพัฒนาคุณภาพชีวิตและนำความรู้ไปใช้ในชีวิตประจำวัน",
+                indicator: "ผู้เรียนได้รับการสนับสนุนตามสิทธิ 15,451 คน",
+                budget: 28134351,
+                agency: "สำนักงานส่งเสริมการเรียนรู้ประจำจังหวัดนราธิวาส"
+            },
+            
+            {
+                id: 17,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 2 การส่งเสริมผู้ประกอบการเพื่อสังคมและการใช้ทุนวัฒนธรรมในพื้นที่",
+                kpiMain: "ตัวชี้วัดที่ 1.ร้อยละของผู้เรียนที่ผ่านการประเมินสมรรถนะอาชีพตามสาขาอาชีพ",
+                name: "เพิ่มทักษะด้านอาชีพแก่นักเรียนที่ไม่ได้เรียนต่อหลังจบการศึกษาภาคบังคับ",
+                target: "นักเรียนหรือเยาวชนจบ ม.3 ที่ไม่ได้ศึกษาต่อ อายุไม่เกิน 25 ปี (40 คน)",
+                activities: "ฝึกอบรมทักษะทางด้านอาชีพ ระยะเวลา 280 ชม. และฝึกในสถานประกอบการ 1 เดือน",
+                outcome: "ผู้สำเร็จการฝึกอบรมมีทักษะตามมาตรฐาน",
+                indicator: "สำเร็จการฝึกอบรมได้ตามมาตรฐาน ไม่น้อยกว่าร้อยละ 80",
+                budget: 693600,
+                agency: "สถาบันพัฒนาฝีมือแรงงาน 25 นราธิวาส"
+            },
+            {
+                id: 21,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 2 การส่งเสริมผู้ประกอบการเพื่อสังคมและการใช้ทุนวัฒนธรรมในพื้นที่",
+                kpiMain: "ตัวชี้วัด 2. ร้อยละของสถานศึกษาที่จัดโครงงานหรือกิจกรรมผู้ประกอบการเพื่อสังคม",
+                name: "พัฒนาระบบนิเวศการบริหารจัดการทรัพย์สินทางปัญญาและยกระดับหลักสูตรนวัตกรรมฮาลาล",
+                target: "นักวิจัย 30 คน, นักศึกษา/บัณฑิต 50 คน",
+                activities: "1. ยกระดับระบบนิเวศนวัตกรรม\n2. พัฒนาหลักสูตรนวัตกรรมฮาลาล\n3. สร้าง Platform ออนไลน์",
+                outcome: "1. ระบบนิเวศการบริหารจัดการทรัพย์สินทางปัญญาพัฒนาเพิ่มขึ้น\n2. มีหลักสูตรด้านนวัตกรรมฮาลาล",
+                indicator: "มี platform ออนไลน์, มีการจัดการแข่งขัน, สร้าง Business Matching 3 เครือข่าย",
+                budget: 2000000,
+                agency: "มหาวิทยาลัยนราธิวาสราชนครินทร์"
+            },
+            {
+                id: 22,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 2 การส่งเสริมผู้ประกอบการเพื่อสังคมและการใช้ทุนวัฒนธรรมในพื้นที่",
+                kpiMain: "ตัวชี้วัด 3. ร้อยละของสถานศึกษาที่บูรณาการทุนวัฒนธรรมท้องถิ่นเข้าในหลักสูตร",
+                name: "ยกระดับและพัฒนาสินค้าและบริการเพื่อเพิ่มขีดความสามารถเศรษฐกิจฐานราก",
+                target: "วิสาหกิจชุมชนต่างๆ จำนวน 125 คน",
+                activities: "พัฒนาผลิตภัณฑ์ชุมชน, ส่งเสริมการตลาดยุคดิจิทัล, ประชาสัมพันธ์สื่อออนไลน์",
+                outcome: "ผู้ประกอบการมีทักษะด้านการผลิต การตลาด ชุมชนมีเศรษฐกิจเข้มแข็งและพึ่งพาตนเองได้",
+                indicator: "ผู้ผ่านการฝึกอบรมพัฒนาสินค้าได้รับรองมาตรฐาน 125 คน",
+                budget: 202600,
+                agency: "วิทยาลัยชุมชนนราธิวาส"
+            },
+
+            {
+                id: 31,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 3 การพัฒนาครูและผู้บริหารสถานศึกษาในฐานะผู้นำการเปลี่ยนแปลง",
+                kpiMain: "ตัวชี้วัดที่ 1. ร้อยละของผู้เรียนที่ได้รับการประเมินสมรรถนะจากการปฏิบัติจริง",
+                name: "Innovation For Thai Education (IFTE) นวัตกรรมการศึกษา เพื่อพัฒนาการศึกษา",
+                target: "ครู นักเรียน ผู้บริหารสถานศึกษา นำร่อง 14 โรงเรียน",
+                activities: "1. ประชุมชี้แจง\n2. อบรมพัฒนา\n3. นำนวัตกรรมไปใช้พัฒนาทักษะ (SOFT POWER)\n4. นิเทศ ติดตาม (PLC)",
+                outcome: "สถานศึกษาใช้นวัตกรรมขับเคลื่อนการศึกษา เกิดการยกระดับคุณภาพการศึกษา",
+                indicator: "ขยายผลนวัตกรรมอย่างน้อย 3 ด้าน, สถานศึกษามีรายงานสังเคราะห์ผลการดำเนินงาน",
+                budget: 180000,
+                agency: "สำนักงานศึกษาธิการจังหวัดนราธิวาส"
+            },
+            {
+                id: 38,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 4 การนิเทศ ติดตาม และตรวจราชการเชิงพัฒนา",
+                kpiMain: "ตัวชี้วัดที่ 1. ร้อยละของสถานศึกษาที่รายงานผลลัพธ์เชิงพื้นที่",
+                name: "นิเทศเพื่อพัฒนาคุณภาพการศึกษาในศตวรรษที่ 21",
+                target: "โรงเรียนในสังกัด สพป.นราธิวาส เขต 3 จำนวน 75 โรง",
+                activities: "นิเทศตามภาระงาน (Function-based), นโยบายเขตพื้นที่ (Area-based), และนโยบายต้นสังกัด",
+                outcome: "โรงเรียนยกระดับผลสัมฤทธิ์ทางการเรียนและจัดการศึกษาได้อย่างมีคุณภาพ",
+                indicator: "ร้อยละ 100 ของโรงเรียนได้รับการพัฒนาการจัดกระบวนการเรียนรู้และติดตามอย่างต่อเนื่อง",
+                budget: 83150,
+                agency: "สพป.นราธิวาส เขต 3"
+            },
+
+            {
+                id: 41,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 5 การสร้างความร่วมมือและการมีส่วนร่วมของทุกภาคส่วน",
+                kpiMain: "ตัวชี้วัดที่ 1. ร้อยละของสถานศึกษาที่จัดการเรียนรู้ร่วมกับชุมชน",
+                name: "โครงการจัดทำแผนพัฒนาการศึกษาจังหวัดนราธิวาส",
+                target: "บุคลากร ศธจ.นราธิวาส และหน่วยงานที่เกี่ยวข้อง 13 หน่วยงาน",
+                activities: "จัดทำแผนพัฒนาการศึกษา พ.ศ. 2566-2570 และแผนปฏิบัติการด้านการศึกษา ประจำปี",
+                outcome: "ศธจ.นราธิวาส มีกรอบทิศทางพัฒนาการศึกษาที่บูรณาการและตอบโจทย์บริบทพื้นที่",
+                indicator: "ศธจ.นราธิวาส มีแผนพัฒนาการศึกษา แผนปฏิบัติการ และรายงานผลการดำเนินงาน",
+                budget: 132000,
+                agency: "สำนักงานศึกษาธิการจังหวัดนราธิวาส"
+            },
+            {
+                id: 43,
+                strategy: "ประเด็นยุทธศาสตร์ที่ 5 การสร้างความร่วมมือและการมีส่วนร่วมของทุกภาคส่วน",
+                kpiMain: "ตัวชี้วัดที่ 2. ร้อยละของสถานศึกษาที่สนับสนุนกิจกรรมการเรียนรู้ตลอดชีวิตในชุมชน",
+                name: "โครงการส่งเสริมการอ่านและการเรียนรู้ตลอดชีวิต",
+                target: "นักเรียน นักศึกษา และประชาชนทั่วไป 37,070 คน",
+                activities: "1. ส่งเสริมการอ่านในห้องสมุด 13 แห่ง\n2. บ้านหนังสือชุมชน 163 แห่ง\n3. รถโมบาย",
+                outcome: "กลุ่มเป้าหมายมีนิสัยรักการอ่าน และได้เรียนรู้อย่างต่อเนื่องตลอดชีวิต",
+                indicator: "จำนวนกิจกรรมดำเนินการเสร็จตามแผน ร้อยละ 100",
+                budget: 144820,
+                agency: "สำนักงานส่งเสริมการเรียนรู้ประจำจังหวัดนราธิวาส"
+            }
+        ];
+
+        // Helper function to format numbers as Thai Baht currency
+        const formatCurrency = (num) => {
+            return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(num);
+        };
+
+        // Function to render projects to the DOM
+        const renderProjects = (projectsToRender) => {
+            const container = document.getElementById('projectsContainer');
+            const noResults = document.getElementById('noResults');
+            container.innerHTML = '';
+
+            if (projectsToRender.length === 0) {
+                container.classList.add('hidden');
+                noResults.classList.remove('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            noResults.classList.add('hidden');
+
+            // Group projects by Strategy for better organization
+            const groupedByStrategy = projectsToRender.reduce((acc, project) => {
+                if (!acc[project.strategy]) {
+                    acc[project.strategy] = [];
+                }
+                acc[project.strategy].push(project);
+                return acc;
+            }, {});
+
+            let totalBudgetCalc = 0;
+
+            for (const [strategyName, projects] of Object.entries(groupedByStrategy)) {
+                // Strategy Header
+                const strategyHeader = document.createElement('div');
+                // Extract strategy number and name
+                const stratParts = strategyName.split(' ');
+                const stratBadge = stratParts.slice(0, 2).join(' ');
+                const stratTitle = stratParts.slice(2).join(' ');
+
+                strategyHeader.innerHTML = `
+                    <div class="flex items-center gap-3 mb-4 mt-8 border-b-2 border-indigo-200 pb-2">
+                        <span class="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide shadow-sm">${stratBadge}</span>
+                        <h2 class="text-xl font-bold text-slate-800">${stratTitle}</h2>
+                    </div>
+                `;
+                container.appendChild(strategyHeader);
+
+                // Render cards for this strategy
+                projects.forEach(project => {
+                    totalBudgetCalc += project.budget;
+                    
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-2xl shadow-sm border border-slate-200 p-6 card-hover transition-all duration-300 relative overflow-hidden';
+                    
+                    // Format text with line breaks
+                    const formatText = (text) => text ? text.replace(/\n/g, '<br>') : '-';
+
+                    card.innerHTML = `
+                        <!-- Decoration line -->
+                        <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                        
+                        <div class="flex flex-col lg:flex-row justify-between items-start gap-4 mb-4">
+                            <div class="w-full lg:w-3/4">
+                                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                    <span class="bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                                        <i class="fa-solid fa-layer-group"></i> ${project.kpiMain.split('.')[0]}
+                                    </span>
+                                </div>
+                                <h3 class="text-lg font-bold text-indigo-900 leading-tight mb-2">${project.name}</h3>
+                                <p class="text-sm text-slate-600 flex items-center gap-2">
+                                    <i class="fa-solid fa-building text-slate-400 w-4"></i> 
+                                    <span class="font-medium text-slate-700">${project.agency}</span>
+                                </p>
+                            </div>
+                            <div class="w-full lg:w-1/4 flex lg:flex-col items-center lg:items-end justify-between lg:justify-start gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <span class="text-xs text-slate-500 font-medium">งบประมาณ</span>
+                                <span class="text-xl font-bold text-emerald-600">${formatCurrency(project.budget)}</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t border-slate-100 pt-4">
+                            
+                            <!-- Target & Activities -->
+                            <div class="space-y-4">
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><i class="fa-solid fa-users text-indigo-400"></i> กลุ่มเป้าหมาย</h4>
+                                    <p class="text-sm text-slate-700 bg-slate-50 p-2 rounded-lg">${formatText(project.target)}</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><i class="fa-solid fa-list-check text-indigo-400"></i> กิจกรรมหลัก</h4>
+                                    <p class="text-sm text-slate-700">${formatText(project.activities)}</p>
+                                </div>
+                            </div>
+
+                            <!-- Outcomes & Indicators -->
+                            <div class="space-y-4">
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><i class="fa-solid fa-lightbulb text-amber-500"></i> ผลลัพธ์ที่คาดหวัง</h4>
+                                    <p class="text-sm text-slate-700 bg-orange-50 p-2 rounded-lg border border-orange-100">${formatText(project.outcome)}</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><i class="fa-solid fa-chart-line text-blue-500"></i> ตัวชี้วัดและค่าเป้าหมาย</h4>
+                                    <p class="text-sm text-slate-700">${formatText(project.indicator)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            // Update Stats
+            document.getElementById('totalProjects').textContent = projectsToRender.length;
+            document.getElementById('totalBudget').textContent = formatCurrency(totalBudgetCalc);
+        };
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearch');
+
+        const handleSearch = () => {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            // Toggle clear button visibility
+            if (searchTerm.length > 0) {
+                clearSearchBtn.classList.remove('hidden');
+                // Change input styling for active search
+                searchInput.classList.remove('bg-opacity-20');
+                searchInput.classList.add('bg-white', 'text-gray-900');
+            } else {
+                clearSearchBtn.classList.add('hidden');
+                searchInput.classList.add('bg-opacity-20');
+                searchInput.classList.remove('bg-white', 'text-gray-900');
+            }
+
+            // Filter logic
+            const filteredProjects = projectData.filter(project => {
+                const searchableString = `
+                    ${project.name} 
+                    ${project.agency} 
+                    ${project.strategy} 
+                    ${project.activities}
+                    ${project.target}
+                    ${project.kpiMain}
+                `.toLowerCase();
+                
+                return searchableString.includes(searchTerm);
+            });
+
+            renderProjects(filteredProjects);
+        };
+
+        // Event Listeners
+        searchInput.addEventListener('input', handleSearch);
+        
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            handleSearch();
+            searchInput.focus();
+        });
+
+        // Initialize display on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderProjects(projectData);
+        });
+
+    </script>
+</body>
+</html>

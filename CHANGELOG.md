@@ -2,6 +2,16 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-08-09 17:45 — นำเข้าข้อมูลโครงการจริง 13 โครงการ (แผนพัฒนาการศึกษาจ.นราธิวาส ปี 2569)
+- นำเข้าจาก `projec_all.html` ตามหลักการออกแบบฐานข้อมูล โดยไม่แก้ schema/โปรแกรมเดิม (ใช้โครงสร้าง `project_strategic_issues` + `project_kpis` ที่มีอยู่)
+- แก้ข้อมูล `strategic_issues`: ปรับ 5 ยุทธศาสตร์ปี 2569 ให้เป็นชื่อตามแผนฯ ถูกต้อง (ยุทธศาสตร์ที่ 1-5) และลบแถวที่ซ้ำ/ผิด (issue_no 6) ที่ไม่มีข้อมูลอ้างอิง
+- เพิ่มหน่วยงานใหม่ 5 แห่งใน `agencies`: ศูนย์วิทยาศาสตร์ฯ, สสจ.นราธิวาส, สถาบันพัฒนาฝีมือแรงงาน 25 นธ., ม.นราธิวาสราชนครินทร์, วิทยาลัยชุมชนนราธิวาส (แมปกับที่มีอยู่ 4 แห่ง: เทศบาลเมือง, สกร., ศธจ., สพป.3)
+- เพิ่ม KPI ระดับจังหวัด 8 ตัวชี้วัดใน `kpi_definitions` (จาก kpiMain ของแต่ละยุทธศาสตร์) และผูก 13 โครงการผ่าน `project_kpis`
+- mapping ฟิลด์: `name→title`, `strategy→strategic_issues`(+junction), `target→target_quantitative`, `indicator→target_qualitative`, `activities→operated_activities`, `outcome→operation_results`, `budget→budget_allocated`, `agency→agency_id`
+- ค่าเริ่มต้น: `fiscal_year=2569`, `status=ยังไม่เริ่ม`, `progress=0`, `budget_used=0`, `result_status=''`, `owner_name=ชื่อหน่วยงาน`, เจ้าของ `username=wirat` (รหัสโครงการ `PRJPLAN001`–`PRJPLAN043`)
+- โครงการ "มหกรรมสัปดาห์วิทยาศาสตร์" บนเครื่องจริงมีอยู่เดิมแต่ข้อมูลไม่ครบ → เติมข้อมูล + ผูกยุทธศาสตร์/KPI ให้สมบูรณ์
+- ทดสอบ local + remote (HTTP 200, ค้นหา KPI ได้, pview แสดงครบ), ลบสคริปต์นำเข้าทิ้งหลังใช้งานเสร็จ
+
 ## 2026-08-07 12:07 — กำหนดความสอดคล้องตัวชี้วัดร่วม KPI ของจังหวัด (1 โครงการ = หลาย KPI)
 - เพิ่มตาราง `project_kpis` (project_id ↔ kpi_id, unique ต่อคู่) รองรับ 1 โครงการสอดคล้องได้หลาย KPI — ใน `migration_upgrade.sql` + `office_budget_edu_db.sql`
 - `project_form.php`: หมวดใหม่ "🎯 ความสอดคล้องตัวชี้วัดร่วม KPI ของจังหวัด" เลือกแบบ checkbox ได้หลายรายการ (โหลดเฉพาะ KPI ที่ active ในปีงบประมาณของโครงการ) + แสดงใน Preview
