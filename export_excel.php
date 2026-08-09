@@ -28,7 +28,7 @@ $res = $conn->query("
     LEFT JOIN agencies a ON a.id = p.agency_id
     WHERE p.fiscal_year = '$escapedYear'
 " . $agencyScope . "
-    ORDER BY p.title ASC
+    ORDER BY a.sort_order ASC, a.agency_name ASC, p.title ASC
 ");
 if ($res) {
     while ($row = $res->fetch_assoc()) $data[] = $row;

@@ -22,7 +22,7 @@ $csrfToken = $_SESSION['csrf_token'];
 // Load reference data using PDO if available
 try {
     // agencies
-    $stmtAgencies = $pdo->query("SELECT id, agency_code, agency_name FROM agencies ORDER BY agency_name ASC");
+    $stmtAgencies = $pdo->query("SELECT id, agency_code, agency_name FROM agencies ORDER BY sort_order ASC, agency_name ASC");
     $agencies = $stmtAgencies->fetchAll();
 
     // strategic_issues for current fiscal year

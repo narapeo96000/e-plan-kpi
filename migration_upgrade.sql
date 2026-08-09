@@ -396,4 +396,35 @@ ON DUPLICATE KEY UPDATE
   `scope_type` = VALUES(`scope_type`),
   `status` = VALUES(`status`);
 
+-- -----------------------------------------------------------------------------
+-- 9) agencies: add sort_order column (display order on dashboard & reports)
+-- -----------------------------------------------------------------------------
+
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'agencies'
+     AND COLUMN_NAME = 'sort_order') = 0,
+  'ALTER TABLE `agencies` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0 AFTER `department`',
+  'SELECT 1'));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 9a) seed default sort_order for known agencies (idempotent: run ได้หลายครั้ง)
+UPDATE `agencies`
+SET `sort_order` = CASE `agency_code`
+    WHEN 'nara1'      THEN 1
+    WHEN 'nara2'      THEN 2
+    WHEN 'nara3'      THEN 3
+    WHEN 'sesaonara'  THEN 4
+    WHEN 'opecnara'   THEN 5
+    WHEN 'naracity'   THEN 6
+    WHEN 'kolokcity'  THEN 7
+    WHEN 'dolenara'   THEN 8
+    WHEN 'narapeo'    THEN 9
+    ELSE `sort_order`
+  END
+WHERE `agency_code` IN ('nara1','nara2','nara3','sesaonara','opecnara','naracity','kolokcity','dolenara','narapeo');
+
 SELECT 'migration_upgrade.sql applied successfully' AS status;

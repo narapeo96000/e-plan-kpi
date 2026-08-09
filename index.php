@@ -112,6 +112,7 @@ $strategySql = "
 " . $agencyScope . "
     WHERE si.fiscal_year = '{$escapedYear}'
     GROUP BY si.id, si.issue_no, si.issue_name
+    ORDER BY si.issue_no ASC
 ";
 $strategyRes = $conn->query($strategySql);
 $strategies = array();
@@ -120,15 +121,16 @@ while ($row = $strategyRes->fetch_assoc()) {
 }
 
 $schoolSql = "
-    SELECT a.agency_name AS school_name, COUNT(p.id) AS project_count,
+    SELECT a.agency_name AS school_name, a.sort_order, COUNT(p.id) AS project_count,
            COALESCE(SUM(CAST(p.budget_allocated AS DECIMAL(15,2))), 0) AS budget_total,
            COALESCE(SUM(CAST(p.budget_used AS DECIMAL(15,2))), 0) AS budget_used_total
     FROM agencies a
     LEFT JOIN projects p ON p.agency_id = a.id AND p.fiscal_year = '{$escapedYear}'
     WHERE 1=1
 " . $schoolScope . "
-    GROUP BY a.id, a.agency_name
-    ORDER BY budget_total DESC, a.agency_name ASC
+    GROUP BY a.id, a.agency_name, a.sort_order
+    HAVING COUNT(p.id) > 0
+    ORDER BY a.sort_order ASC, a.agency_name ASC
 ";
 $schoolRes = $conn->query($schoolSql);
 $schools = array();

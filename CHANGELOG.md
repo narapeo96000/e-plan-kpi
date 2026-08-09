@@ -2,6 +2,13 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-08-09 20:15 — เรียงลำดับยุทธศาสตร์และกำหนดลำดับหน่วยงาน
+- `index.php`: เรียง "โครงการแยกตามยุทธศาสตร์" ตาม `issue_no` (1,2,3,...n) บน Dashboard
+- เพิ่มคอลัมน์ `sort_order` ในตาราง `agencies` (เรียงหน่วยงานบน Dashboard/รายงาน/ฟอร์ม/dropdown ทุกจุด: `index.php`, `schools.php`, `db.php` (getSchools), `projects.php`, `project_form.php`, `users.php`, `export_excel.php`, `export_pdf.php`)
+- `schools.php`: เพิ่มช่อง "ลำดับแสดงผล" (ตัวเลข, 0=ค่าเริ่มต้น, น้อย = แสดงก่อน) ในฟอร์มเพิ่ม/แก้ไข + แสดงคอลัมน์ลำดับในตาราง + `ensureAgencyTable()` รองรับคอลัมน์ใหม่อัตโนมัติ
+- `office_budget_edu_db.sql`: เพิ่มคอลัมน์ `sort_order` + seed ลำดับเริ่มต้น 1-9 ตามหน่วยงานที่มีอยู่
+- `migration_upgrade.sql`: เพิ่ม section 9 (idempotent) เพิ่มคอลัมน์ `sort_order` + set ค่าเริ่มต้นตาม `agency_code`
+
 ## 2026-08-09 19:17 — ปรับปรุงความปลอดภัย (Security hardening) + ตัวกรองผลการดำเนินการ
 - `db.php`: เพิ่ม security headers (X-Content-Type-Options / X-Frame-Options / Referrer-Policy), harden session cookie (httponly+secure, PHP 5.6 compatible positional), helpers CSRF `csrfToken()`, `csrfField()`, `csrfCheck($redirect)` พร้อม fallback PHP 5.6; `db.example.php` ตามให้ตรงกัน
 - CSRF (ป้องกัน Cross-Site Request Forgery) ในทุกฟอร์ม/โพสต์: `kpi_management.php`, `users.php`, `strategies.php`, `schools.php`, `budget_sources.php`, `budget_transactions.php` (add/edit/delete + JSON), `setting.php`, `profile.php`, `okr_agency_targets.php`, `submit_okr.php`, `okr_project_save.php`, `okr_project_form.php`, `project_edit.php`, `okr_form.php`; ลิงก์ toggle (GET) ตรวจ `csrf` param

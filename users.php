@@ -142,7 +142,7 @@ if ($action === 'edit' && $userId > 0) {
 }
 
 $agencies = array();
-$agRes = $conn->query("SELECT id, agency_code, agency_name FROM agencies ORDER BY agency_name ASC");
+$agRes = $conn->query("SELECT id, agency_code, agency_name FROM agencies ORDER BY sort_order ASC, agency_name ASC");
 if ($agRes) {
     while ($aRow = $agRes->fetch_assoc()) {
         $agencies[] = $aRow;

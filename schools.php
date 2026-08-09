@@ -77,6 +77,9 @@ function ensureAgencyTable($conn, $tableName) {
         if (!in_array('department', $columns, true)) {
             $conn->query("ALTER TABLE $tableName ADD COLUMN department VARCHAR(255) DEFAULT NULL AFTER agency_name");
         }
+        if (!in_array('sort_order', $columns, true)) {
+            $conn->query("ALTER TABLE $tableName ADD COLUMN sort_order INT NOT NULL DEFAULT 0 AFTER department");
+        }
         if (!in_array('created_at', $columns, true)) {
             $conn->query("ALTER TABLE $tableName ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER department");
         }
@@ -100,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $agencyCodeInput = isset($_POST['agency_code']) ? trim($_POST['agency_code']) : '';
         $agencyName = isset($_POST['agency_name']) ? trim($_POST['agency_name']) : '';
         $department = isset($_POST['department']) ? trim($_POST['department']) : '';
+        $sortOrder = isset($_POST['sort_order']) ? max(0, (int)$_POST['sort_order']) : 0;
         $password = isset($_POST['password']) ? trim($_POST['password']) : '';
         $editId = isset($_POST['agency_record_id']) ? intval($_POST['agency_record_id']) : 0;
 
@@ -116,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'รหัสหน่วยงานนี้ถูกใช้งานแล้ว';
             } else {
                 if ($editId > 0) {
-                    $updateFields = "agency_code = '" . $conn->real_escape_string($agencyCodeInput) . "', agency_name = '" . $conn->real_escape_string($agencyName) . "', department = '" . $conn->real_escape_string($department) . "'";
+                    $updateFields = "agency_code = '" . $conn->real_escape_string($agencyCodeInput) . "', agency_name = '" . $conn->real_escape_string($agencyName) . "', department = '" . $conn->real_escape_string($department) . "', sort_order = $sortOrder";
                     if ($password !== '') {
                         $hash = password_hash($password, PASSWORD_DEFAULT);
                         $updateFields .= ", password = '" . $conn->real_escape_string($hash) . "'";
@@ -127,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'agency_code' => $agencyCodeInput,
                         'agency_name' => $agencyName,
                         'department' => $department,
+                        'sort_order' => $sortOrder,
                     ));
                     header('Location: schools.php');
                     exit;
@@ -135,13 +140,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $error = 'กรุณากรอกรหัสผ่านสำหรับหน่วยงานใหม่';
                     } else {
                         $hash = password_hash($password, PASSWORD_DEFAULT);
-                        $conn->query("INSERT INTO $tableName (agency_code, password, agency_name, department) VALUES ('" . $conn->real_escape_string($agencyCodeInput) . "', '" . $conn->real_escape_string($hash) . "', '" . $conn->real_escape_string($agencyName) . "', '" . $conn->real_escape_string($department) . "')");
+                        $conn->query("INSERT INTO $tableName (agency_code, password, agency_name, department, sort_order) VALUES ('" . $conn->real_escape_string($agencyCodeInput) . "', '" . $conn->real_escape_string($hash) . "', '" . $conn->real_escape_string($agencyName) . "', '" . $conn->real_escape_string($department) . "', $sortOrder)");
                         $newSchoolId = (int)$conn->insert_id;
                         $success = 'เพิ่มหน่วยงานเรียบร้อยแล้ว';
                         logfile($conn, 'เพิ่ม', 'schools', $newSchoolId, array(
                             'agency_code' => $agencyCodeInput,
                             'agency_name' => $agencyName,
                             'department' => $department,
+                            'sort_order' => $sortOrder,
                         ));
                         header('Location: schools.php');
                         exit;
@@ -167,7 +173,7 @@ if ($action === 'reset' && $schoolId > 0 && $_SERVER['REQUEST_METHOD'] === 'POST
 }
 
 $schools = array();
-$result = $conn->query("SELECT * FROM $tableName ORDER BY agency_name ASC, id ASC");
+$result = $conn->query("SELECT * FROM $tableName ORDER BY sort_order ASC, agency_name ASC, id ASC");
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $schools[] = $row;
@@ -224,6 +230,7 @@ if ($action === 'edit' && $schoolId > 0) {
                                 <thead>
                                     <tr>
                                         <th>#</th>
+                                        <th>ลำดับ</th>
                                         <th>รหัสหน่วยงาน</th>
                                         <th>ชื่อหน่วยงาน</th>
                                         <th>สังกัด</th>
@@ -234,6 +241,7 @@ if ($action === 'edit' && $schoolId > 0) {
                                     <?php foreach ($schools as $index => $school): ?>
                                         <tr>
                                             <td><?= $index + 1 ?></td>
+                                            <td><?= (int)$school['sort_order'] ?></td>
                                             <td><?= htmlspecialchars($school['agency_code']) ?></td>
                                             <td><?= htmlspecialchars($school['agency_name']) ?></td>
                                             <td><?= htmlspecialchars($school['department'] ?: '-') ?></td>
@@ -269,6 +277,11 @@ if ($action === 'edit' && $schoolId > 0) {
                             <div class="mb-3">
                                 <label class="form-label">สังกัด</label>
                                 <input class="form-control" type="text" name="department" value="<?= htmlspecialchars($editingSchool ? ($editingSchool['department'] ?: '') : '') ?>" placeholder="เช่น สพป.นธ.1, สพม.นราธิวาส">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">ลำดับแสดงผล</label>
+                                <input class="form-control" type="number" min="0" step="1" name="sort_order" value="<?= htmlspecialchars($editingSchool ? (int)$editingSchool['sort_order'] : 0) ?>">
+                                <div class="form-text">ใช้เรียงลำดับหน่วยงานบนหน้า Dashboard และรายงาน (น้อย = แสดงก่อน)</div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">รหัสผ่าน<?= $editingSchool ? ' (เว้นว่างหากไม่ต้องการเปลี่ยน)' : '' ?></label>

@@ -120,7 +120,7 @@ $yearRes = $conn->query("SELECT DISTINCT fiscal_year FROM projects ORDER BY fisc
 while ($row = $yearRes->fetch_assoc()) {
     $yearOptions[] = $row['fiscal_year'];
 }
-$schoolRes = $conn->query("SELECT id, agency_name AS school_name FROM agencies WHERE agency_name != '' ORDER BY agency_name ASC");
+$schoolRes = $conn->query("SELECT id, agency_name AS school_name FROM agencies WHERE agency_name != '' ORDER BY sort_order ASC, agency_name ASC");
 while ($row = $schoolRes->fetch_assoc()) {
     $schoolOptions[] = $row;
 }
