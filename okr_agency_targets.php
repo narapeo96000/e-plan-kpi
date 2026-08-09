@@ -28,6 +28,7 @@ $agencyStmt = null;
 $errors = array();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_targets'])) {
+    csrfCheck('okr_agency_targets.php');
     if (!isset($_POST['current_value']) || !is_array($_POST['current_value'])) {
         $errors[] = 'ข้อมูลไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
     } else {
@@ -215,6 +216,7 @@ $overallGrade = gradeLabel($overallPercent);
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-body p-4">
                     <form method="post">
+                        <?= csrfField() ?>
                         <input type="hidden" name="save_targets" value="1">
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle project-table mb-0">

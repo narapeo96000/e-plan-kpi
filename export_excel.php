@@ -6,9 +6,9 @@ $fiscalYear = !empty($fiscal_year) ? $fiscal_year : date('Y') + 543;
 $filterYear = isset($_GET['year']) ? trim($_GET['year']) : $fiscalYear;
 $escapedYear = $conn->real_escape_string($filterYear);
 
-// Scope export to the logged-in user's parent agency (admin sees all)
+// Scope export to the logged-in user's parent agency (admin & plan see all)
 $agencyScope = '';
-if (isLoggedIn() && !isAdmin()) {
+if (isLoggedIn() && !isAdminOrPlan()) {
     $ua = (int)currentAgencyId();
     if ($ua > 0) {
         $agencyScope = " AND p.agency_id = " . $ua;
@@ -34,6 +34,18 @@ if ($res) {
     while ($row = $res->fetch_assoc()) $data[] = $row;
 }
 
+// Prevent Excel formula injection: prefix values that start with =, +, -, @
+function xlsSafe($value) {
+    $value = (string)$value;
+    if ($value === '') {
+        return '';
+    }
+    if (preg_match('/^[=+\-@]/', $value)) {
+        return "'" . $value;
+    }
+    return $value;
+}
+
 header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
 header('Content-Disposition: attachment; filename="report_' . $filterYear . '.xls"');
 header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -55,16 +67,16 @@ foreach ($data as $row) {
     $totalAlloc += (float)$row['budget_allocated'];
     $totalUsed += (float)$row['budget_used'];
     echo '<tr>';
-    echo '<td>' . htmlspecialchars($row['project_id'] ?: '-') . '</td>';
-    echo '<td>' . htmlspecialchars($row['title']) . '</td>';
-    echo '<td>' . htmlspecialchars($row['school_name'] ?: $row['department'] ?: '-') . '</td>';
-    echo '<td>' . htmlspecialchars($row['budget_source'] ?: '-') . '</td>';
+    echo '<td>' . xlsSafe(htmlspecialchars($row['project_id'] ?: '-')) . '</td>';
+    echo '<td>' . xlsSafe(htmlspecialchars($row['title'])) . '</td>';
+    echo '<td>' . xlsSafe(htmlspecialchars($row['school_name'] ?: $row['department'] ?: '-')) . '</td>';
+    echo '<td>' . xlsSafe(htmlspecialchars($row['budget_source'] ?: '-')) . '</td>';
     echo '<td align="right">' . number_format((float)$row['budget_allocated'], 2) . '</td>';
     echo '<td align="right">' . number_format((float)$row['budget_used'], 2) . '</td>';
     echo '<td align="right">' . number_format(max(0, (float)$row['budget_remain']), 2) . '</td>';
     echo '<td align="right">' . (float)$row['usage_pct'] . '%</td>';
-    echo '<td>' . htmlspecialchars($row['status'] ?: '-') . '</td>';
-    echo '<td>' . htmlspecialchars($row['owner_name'] ?: '-') . '</td>';
+    echo '<td>' . xlsSafe(htmlspecialchars($row['status'] ?: '-')) . '</td>';
+    echo '<td>' . xlsSafe(htmlspecialchars($row['owner_name'] ?: '-')) . '</td>';
     echo '</tr>';
 }
 echo '<tr style="font-weight:bold;background:#f0f0f0;">';

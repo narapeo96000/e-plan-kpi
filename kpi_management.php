@@ -17,6 +17,7 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrfCheck('kpi_management.php');
     if (isset($_POST['save_kpi'])) {
         $kpiId = isset($_POST['kpi_id']) ? intval($_POST['kpi_id']) : 0;
         $fiscalYear = trim(isset($_POST['fiscal_year']) ? $_POST['fiscal_year'] : '');
@@ -68,6 +69,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($action === 'toggle_status' && $kpiId > 0) {
+    // CSRF: state-changing action must carry the token
+    $gotToken = isset($_GET['csrf']) ? $_GET['csrf'] : '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $gotToken)) {
+        setFlash('error', 'CSRF token ไม่ถูกต้อง กรุณาลองใหม่');
+        header('Location: kpi_management.php');
+        exit;
+    }
     $kpiRes = $conn->query("SELECT kpi_name, status FROM kpi_definitions WHERE id = $kpiId LIMIT 1");
     if ($kpiRes && $row = $kpiRes->fetch_assoc()) {
         $newStatus = $row['status'] === 'active' ? 'inactive' : 'active';
@@ -200,7 +208,7 @@ if ($action === 'edit' && $kpiId > 0) {
                                                 </td>
                                                 <td>
                                                     <a class="btn btn-sm btn-outline-primary" href="kpi_management.php?action=edit&id=<?= (int)$kpi['id'] ?>">แก้ไข</a>
-                                                    <a class="btn btn-sm btn-outline-secondary" href="kpi_management.php?action=toggle_status&id=<?= (int)$kpi['id'] ?>">
+                                                    <a class="btn btn-sm btn-outline-secondary" href="kpi_management.php?action=toggle_status&id=<?= (int)$kpi['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>">
                                                         <?= $kpi['status'] === 'active' ? 'ระงับ' : 'เปิดใช้งาน' ?>
                                                     </a>
                                                 </td>
@@ -219,6 +227,7 @@ if ($action === 'edit' && $kpiId > 0) {
                             <h2 class="h5 fw-bold mb-3"><?= $editingKpi ? 'แก้ไขตัวชี้วัด' : 'เพิ่มตัวชี้วัดใหม่' ?></h2>
                             <form method="post">
                                 <input type="hidden" name="kpi_id" value="<?= $editingKpi ? intval($editingKpi['id']) : 0 ?>">
+                                <?= csrfField() ?>
                                 <div class="mb-3">
                                     <label class="form-label">ปีงบประมาณ <span class="text-danger">*</span></label>
                                     <input class="form-control" type="text" maxlength="4" name="fiscal_year" value="<?= htmlspecialchars(isset($editingKpi['fiscal_year']) ? $editingKpi['fiscal_year'] : $currentFiscalYear) ?>" required>

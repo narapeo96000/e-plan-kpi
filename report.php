@@ -6,9 +6,9 @@ $fiscalYear = !empty($fiscal_year) ? $fiscal_year : date('Y') + 543;
 $filterYear = isset($_GET['year']) ? trim($_GET['year']) : $fiscalYear;
 $escapedYear = $conn->real_escape_string($filterYear);
 
-// Scope report data to the logged-in user's parent agency (admin sees all)
+// Scope report data to the logged-in user's parent agency (admin & plan see all)
 $agencyScope = '';
-if (isLoggedIn() && !isAdmin()) {
+if (isLoggedIn() && !isAdminOrPlan()) {
     $ua = (int)currentAgencyId();
     if ($ua > 0) {
         $agencyScope = " AND p.agency_id = " . $ua;
@@ -72,7 +72,7 @@ $txTotal = (float)(isset($transactionSummary['tx_total']) ? $transactionSummary[
 
 $years = array();
 $yearsSql = "SELECT DISTINCT fiscal_year FROM projects";
-if (isLoggedIn() && !isAdmin()) {
+if (isLoggedIn() && !isAdminOrPlan()) {
     $ua = (int)currentAgencyId();
     if ($ua > 0) {
         $yearsSql .= " WHERE agency_id = " . $ua;

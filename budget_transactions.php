@@ -11,6 +11,7 @@ $filterDateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $filterDateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrfCheck('budget_transactions.php');
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
     if ($action === 'add' || $action === 'edit') {
@@ -291,6 +292,7 @@ if ($projectsResult) {
                                     <td>
                                         <button class="btn btn-sm btn-outline-primary" onclick="openEditModal(<?= (int)$tx['id'] ?>)">✏️</button>
                                         <form method="post" style="display:inline" onsubmit="return confirm('ยืนยันการลบรายการนี้?')">
+                                            <?= csrfField() ?>
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="tx_id" value="<?= (int)$tx['id'] ?>">
                                             <button class="btn btn-sm btn-outline-danger">🗑️</button>
@@ -311,6 +313,7 @@ if ($projectsResult) {
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="post">
+                <?= csrfField() ?>
                 <input type="hidden" name="action" id="txAction" value="add">
                 <input type="hidden" name="tx_id" id="txId" value="0">
                 <div class="modal-header">
@@ -359,7 +362,7 @@ if ($projectsResult) {
 </div>
 
 <script>
-var transactions = <?= json_encode($transactions, JSON_UNESCAPED_UNICODE) ?>;
+var transactions = <?= json_encode($transactions, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 function openAddModal() {
     document.getElementById('txAction').value = 'add';

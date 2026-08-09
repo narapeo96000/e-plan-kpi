@@ -35,6 +35,12 @@ if (!is_array($data)) {
     $data = $_POST;
 }
 
+// CSRF: accept token from JSON payload or form field
+$submittedToken = isset($data['csrf_token']) ? $data['csrf_token'] : '';
+if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $submittedToken)) {
+    jsonResponse(false, 'CSRF token ไม่ถูกต้อง กรุณาลองใหม่');
+}
+
 $fiscalYear   = isset($data['fiscal_year']) ? trim($data['fiscal_year']) : '';
 $strategyId   = isset($data['strategic_issue_id']) && $data['strategic_issue_id'] !== '' ? (int)$data['strategic_issue_id'] : null;
 $strategicIssueIds = array();

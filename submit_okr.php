@@ -29,6 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirectBack('error', 'Invalid request method.');
 }
 
+// CSRF check
+csrfCheck('okr_form.php');
+
 $fiscal_year = isset($_POST['fiscal_year']) ? trim($_POST['fiscal_year']) : '';
 $project_name = isset($_POST['project_name']) ? trim($_POST['project_name']) : '';
 $objective_text = isset($_POST['objective_text']) ? trim($_POST['objective_text']) : '';

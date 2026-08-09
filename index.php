@@ -1,6 +1,11 @@
 ﻿<?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Show errors only in local development; hide in production to avoid leaking details
+if (isset($_SERVER['SERVER_ADDR']) && in_array($_SERVER['SERVER_ADDR'], array('127.0.0.1', '::1'), true)) {
+    ini_set('display_errors', 1);
+} else {
+    ini_set('display_errors', 0);
+}
 require_once __DIR__ . '/db.php';
 
 /**
@@ -211,6 +216,22 @@ foreach ($statusOrder as $statusLabel) {
     );
 }
 
+// KPI overview: shared provincial KPIs for the selected year + aligned project count
+$kpiSql = "
+    SELECT k.id, k.kpi_name, k.target_percent, k.success_indicator, k.scope_type, k.status,
+           (SELECT COUNT(*) FROM project_kpis pk WHERE pk.kpi_id = k.id) AS aligned_projects
+    FROM kpi_definitions k
+    WHERE k.fiscal_year = '{$escapedYear}' AND k.status = 'active'
+    ORDER BY k.id ASC
+";
+$kpiRes = $conn->query($kpiSql);
+$kpis = array();
+if ($kpiRes) {
+    while ($krow = $kpiRes->fetch_assoc()) {
+        $kpis[] = $krow;
+    }
+}
+
 function buildDashboardProjectPageUrl($page, $filterYear)
 {
     return 'index.php?year=' . urlencode($filterYear) . '&page=' . (int)$page;
@@ -377,6 +398,48 @@ function buildDashboardProjectPageUrl($page, $filterYear)
             <div class="d-flex justify-content-end mb-2">
                 <a class="btn btn-primary btn-sm" href="projects.php">ดูโครงการทั้งหมด →</a>
             </div>
+
+            <?php if (!empty($kpis)): ?>
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h5 class="fw-bold mb-0">📐 ตัวชี้วัด KPI ของจังหวัด (ปีงบประมาณ <?= htmlspecialchars($filterYear) ?>)</h5>
+                        <?php if (isAdminOrPlan()): ?>
+                            <a class="section-action small" href="kpi_management.php">จัดการ KPI →</a>
+                        <?php endif; ?>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>ตัวชี้วัด</th>
+                                    <th class="text-center">ค่าเป้าหมาย</th>
+                                    <th class="text-center">ระดับ</th>
+                                    <th class="text-center">โครงการที่สอดคล้อง</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($kpis as $ki => $kpi): ?>
+                                    <tr>
+                                        <td class="text-muted"><?= $ki + 1 ?></td>
+                                        <td>
+                                            <div class="fw-semibold"><?= htmlspecialchars($kpi['kpi_name']) ?></div>
+                                            <?php if (!empty($kpi['success_indicator'])): ?>
+                                                <div class="small text-muted" style="max-width:560px;"><?= htmlspecialchars($kpi['success_indicator']) ?></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-center fw-bold text-primary"><?= htmlspecialchars(rtrim(rtrim(number_format((float)$kpi['target_percent'], 2), '0'), '.')) ?>%</td>
+                                        <td class="text-center"><span class="badge bg-primary-subtle text-primary-emphasis"><?= $kpi['scope_type'] === 'province' ? 'จังหวัด' : 'หน่วยงาน' ?></span></td>
+                                        <td class="text-center"><span class="badge rounded-pill <?= (int)$kpi['aligned_projects'] > 0 ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis' ?>"><?= (int)$kpi['aligned_projects'] ?> โครงการ</span></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-body">

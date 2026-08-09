@@ -2,6 +2,22 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-08-09 19:17 — ปรับปรุงความปลอดภัย (Security hardening) + ตัวกรองผลการดำเนินการ
+- `db.php`: เพิ่ม security headers (X-Content-Type-Options / X-Frame-Options / Referrer-Policy), harden session cookie (httponly+secure, PHP 5.6 compatible positional), helpers CSRF `csrfToken()`, `csrfField()`, `csrfCheck($redirect)` พร้อม fallback PHP 5.6; `db.example.php` ตามให้ตรงกัน
+- CSRF (ป้องกัน Cross-Site Request Forgery) ในทุกฟอร์ม/โพสต์: `kpi_management.php`, `users.php`, `strategies.php`, `schools.php`, `budget_sources.php`, `budget_transactions.php` (add/edit/delete + JSON), `setting.php`, `profile.php`, `okr_agency_targets.php`, `submit_okr.php`, `okr_project_save.php`, `okr_project_form.php`, `project_edit.php`, `okr_form.php`; ลิงก์ toggle (GET) ตรวจ `csrf` param
+- `login.php`: `session_regenerate_id(true)` หลังล็อกอิน (กัน session fixation); `logout.php`: ล้าง session cookie + `session_destroy()`
+- `index.php`: ปิด `display_errors` ใน production; เพิ่ม KPI overview section ใน dashboard (รวมจำนวนตัวชี้วัด + จำนวนโครงการที่ผูก)
+- `export_excel.php`: เพิ่ม `xlsSafe()` กัน Excel formula injection ในทุก cell ข้อความ
+- `export_pdf.php` / `export_excel.php` / `report.php`: เปลี่ยน scope เป็น `!isAdminOrPlan()` (ผู้ใช้ระดับ plan เห็นข้อมูลจังหวัดทั้งหมด)
+- `projects.php`: เพิ่มตัวกรอง "ผลการดำเนินการ" (บรรลุ/ระหว่างดำเนินการ/ไม่บรรลุ/ยังไม่ระบุ) ใช้กับรายการ + pagination + ค้นหา
+
+## 2026-08-09 18:30 — กำหนดเป้าประสงค์/ตัวชี้วัด/ค่าเป้าหมายตามประเด็นยุทธศาสตร์ ปี 2569 (ชุดใหม่แทนที่ของเดิม)
+- `office_budget_edu_db.sql`: แก้ seed `strategic_issues` ปี 2569 เป็น 5 ยุทธศาสตร์ตามแผนพัฒนาการศึกษาจังหวัดนราธิวาส (ผู้เรียนเป็นศูนย์กลาง / ผู้ประกอบการเพื่อสังคมและทุนวัฒนธรรม / ครูและผู้บริหารผู้นำการเปลี่ยนแปลง / นิเทศ ติดตาม ตรวจราชการเชิงพัฒนา / ความร่วมมือทุกภาคส่วน) โดยเก็บยุทธศาสตร์ปี 2568 ไว้ (เลื่อน id เป็น 6-7)
+- ปรับ `projects` seed ที่ชี้ `strategy_id` เดิมไม่ถูกต้อง: "การจัดงานฉลองวันเด็กแห่งชาติ" → ยุทธศาสตร์ที่ 5, "การเงินสัญจร" → ยุทธศาสตร์ที่ 4 (เดิมชี้ id 6 ซึ่งคือยุทธศาสตร์ปี 2568)
+- แทนที่ seed `kpi_definitions` ปี 2569 ด้วย 10 ตัวชี้วัดใหม่ตามเป้าประสงค์ของ 5 ยุทธศาสตร์ (ค่าเป้าหมาย 60% ยกเว้นคุณลักษณะที่พึงประสงค์ 70%) ลบ KPI เดิม 3 ตัว (บรรลุตามแผน/ใช้จ่ายงบฯ/รายงานผล)
+- `migration_upgrade.sql`: เพิ่ม section 8 (idempotent) แมปยุทธศาสตร์ด้วย `fiscal_year + issue_no` (ไม่ผูก id), ลบยุทธศาสตร์ปี 2569 ที่เกินข้อ 5, ลบ KPI ปี 2569 เดิมแล้วนำเข้าชุดใหม่
+- หมายเหตุ: โครงการที่เคยผูก KPI เดิมไว้ใน `project_kpis` ต้องผูกกับ KPI ชุดใหม่ผ่านระบบอีกครั้ง (ไม่มี FK ระหว่างตาราง)
+
 ## 2026-08-09 17:45 — นำเข้าข้อมูลโครงการจริง 13 โครงการ (แผนพัฒนาการศึกษาจ.นราธิวาส ปี 2569)
 - นำเข้าจาก `projec_all.html` ตามหลักการออกแบบฐานข้อมูล โดยไม่แก้ schema/โปรแกรมเดิม (ใช้โครงสร้าง `project_strategic_issues` + `project_kpis` ที่มีอยู่)
 - แก้ข้อมูล `strategic_issues`: ปรับ 5 ยุทธศาสตร์ปี 2569 ให้เป็นชื่อตามแผนฯ ถูกต้อง (ยุทธศาสตร์ที่ 1-5) และลบแถวที่ซ้ำ/ผิด (issue_no 6) ที่ไม่มีข้อมูลอ้างอิง

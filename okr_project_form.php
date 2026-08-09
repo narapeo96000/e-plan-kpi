@@ -276,6 +276,7 @@ $defaultYear = $fiscal_year;
         }
 
         var payload = {
+            csrf_token: '<?= csrfToken() ?>',
             fiscal_year: form.fiscal_year.value,
             strategic_issue_id: getSelectedStrategyId(),
             strategic_issues: getSelectedStrategyIds(),

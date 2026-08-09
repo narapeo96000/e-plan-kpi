@@ -30,6 +30,7 @@ if (!$user) {
 
 $errors = array();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrfCheck('profile.php');
     $name = trim(isset($_POST['name']) ? $_POST['name'] : '');
     $position = trim(isset($_POST['position']) ? $_POST['position'] : '');
     $department = trim(isset($_POST['department']) ? $_POST['department'] : '');
@@ -141,6 +142,7 @@ $displayDepartment = isset($user['department']) ? $user['department'] : '';
                 <?php endif; ?>
 
                 <form method="post">
+                    <?= csrfField() ?>
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
                             <label class="form-label">ชื่อผู้ใช้งาน</label>

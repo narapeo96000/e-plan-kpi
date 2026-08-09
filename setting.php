@@ -18,6 +18,7 @@ $page = 'setting';
 
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrfCheck('setting.php');
     // Collect and validate inputs
     $office = isset($_POST['office_name']) ? trim($_POST['office_name']) : '';
     $year   = isset($_POST['fiscal_year']) ? trim($_POST['fiscal_year']) : '';
@@ -143,6 +144,7 @@ $office_tel       = isset($setting['office_tel']) ? $setting['office_tel'] : '07
 
             <div style="max-width:700px;">
             <form method="POST">
+                <?= csrfField() ?>
                 <!-- Office Settings -->
                 <div class="glass-card" style="margin-bottom:20px;">
                     <div class="form-section-title">🏛️ ข้อมูลสำนักงาน</div>

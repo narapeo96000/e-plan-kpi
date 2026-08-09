@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/db.php';
 
 /**
@@ -17,6 +17,7 @@ $searchQuery = isset($_GET['q']) ? trim($_GET['q']) : '';
 $filterYear = isset($_GET['year']) ? trim($_GET['year']) : $fiscalYear;
 $filterSchool = isset($_GET['school']) ? trim($_GET['school']) : (isset($_GET['department']) ? trim($_GET['department']) : '');
 $filterStatus = isset($_GET['status']) ? trim($_GET['status']) : '';
+$filterResult = isset($_GET['result']) ? trim($_GET['result']) : '';
 $filterSource = isset($_GET['source']) ? trim($_GET['source']) : '';
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $perPage = 10;
@@ -44,6 +45,13 @@ if ($filterSchool !== '') {
 }
 if ($filterStatus !== '') {
     $conditions[] = "p.status = '" . $conn->real_escape_string($filterStatus) . "'";
+}
+if ($filterResult !== '') {
+    if ($filterResult === 'ยังไม่ระบุ') {
+        $conditions[] = "(p.result_status IS NULL OR TRIM(p.result_status) = '')";
+    } else {
+        $conditions[] = "p.result_status = '" . $conn->real_escape_string($filterResult) . "'";
+    }
 }
 if ($filterSource !== '') {
     $conditions[] = "p.budget_source = '" . $conn->real_escape_string($filterSource) . "'";
@@ -120,12 +128,13 @@ $statusRes = $conn->query("SELECT DISTINCT status FROM projects WHERE status != 
 while ($row = $statusRes->fetch_assoc()) {
     $statusOptions[] = $row['status'];
 }
+$resultOptions = array('บรรลุ', 'ระหว่างดำเนินการ', 'ไม่บรรลุ', 'ยังไม่ระบุ');
 $sourceRes = $conn->query("SELECT DISTINCT source_name FROM budget_income WHERE fiscal_year = '" . $conn->real_escape_string($filterYear) . "' ORDER BY source_name ASC");
 while ($row = $sourceRes->fetch_assoc()) {
     $sourceOptions[] = $row['source_name'];
 }
 
-function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterSource)
+function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterResult, $filterSource)
 {
     $params = array();
     if ($searchQuery !== '') {
@@ -139,6 +148,9 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
     }
     if ($filterStatus !== '') {
         $params[] = 'status=' . urlencode($filterStatus);
+    }
+    if ($filterResult !== '') {
+        $params[] = 'result=' . urlencode($filterResult);
     }
     if ($filterSource !== '') {
         $params[] = 'source=' . urlencode($filterSource);
@@ -216,6 +228,15 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
                                     <option value="">-- ทุกสถานะ --</option>
                                     <?php foreach ($statusOptions as $statusOpt): ?>
                                         <option value="<?= htmlspecialchars($statusOpt) ?>" <?= $filterStatus === $statusOpt ? 'selected' : '' ?>><?= htmlspecialchars($statusOpt) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">ผลการดำเนินการ</label>
+                                <select name="result" class="form-select">
+                                    <option value="">-- ทุกผลการดำเนินการ --</option>
+                                    <?php foreach ($resultOptions as $resultOpt): ?>
+                                        <option value="<?= htmlspecialchars($resultOpt) ?>" <?= $filterResult === $resultOpt ? 'selected' : '' ?>><?= htmlspecialchars($resultOpt) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -394,15 +415,15 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
                             <nav aria-label="Pagination">
                                 <ul class="pagination pagination-sm mb-0">
                                     <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
-                                        <a class="page-link" href="<?= buildProjectPaginationUrl($page - 1, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterSource) ?>">ก่อนหน้า</a>
+                                        <a class="page-link" href="<?= buildProjectPaginationUrl($page - 1, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterResult, $filterSource) ?>">ก่อนหน้า</a>
                                     </li>
                                     <?php for ($i = 1; $i <= $totalPages; $i++): ?>
                                         <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-                                            <a class="page-link" href="<?= buildProjectPaginationUrl($i, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterSource) ?>"><?= $i ?></a>
+                                            <a class="page-link" href="<?= buildProjectPaginationUrl($i, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterResult, $filterSource) ?>"><?= $i ?></a>
                                         </li>
                                     <?php endfor; ?>
                                     <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
-                                        <a class="page-link" href="<?= buildProjectPaginationUrl($page + 1, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterSource) ?>">ถัดไป</a>
+                                        <a class="page-link" href="<?= buildProjectPaginationUrl($page + 1, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterResult, $filterSource) ?>">ถัดไป</a>
                                     </li>
                                 </ul>
                             </nav>
@@ -429,7 +450,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    const filterElements = form.querySelectorAll('select[name="year"], select[name="school"], select[name="status"], select[name="source"]');
+    const filterElements = form.querySelectorAll('select[name="year"], select[name="school"], select[name="status"], select[name="result"], select[name="source"]');
     filterElements.forEach(function(el) {
         el.addEventListener('change', function() {
             form.submit();
@@ -440,3 +461,4 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

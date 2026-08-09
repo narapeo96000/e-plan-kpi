@@ -21,6 +21,7 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrfCheck('users.php');
     if (isset($_POST['save_user'])) {
         $userId = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
         $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
@@ -90,6 +91,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($action === 'toggle_status' && $userId > 0) {
+    // CSRF: state-changing action must carry the token
+    $gotToken = isset($_GET['csrf']) ? $_GET['csrf'] : '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $gotToken)) {
+        setFlash('error', 'CSRF token ไม่ถูกต้อง กรุณาลองใหม่');
+        header('Location: users.php');
+        exit;
+    }
     $userRes = $conn->query("SELECT username, status FROM users WHERE id = $userId LIMIT 1");
     if ($userRes && $row = $userRes->fetch_assoc()) {
         $newStatus = $row['status'] === 'active' ? 'inactive' : 'active';
@@ -201,7 +209,7 @@ if ($agRes) {
                                                 <td><?= htmlspecialchars($user['status']) ?></td>
                                                 <td>
                                                     <a class="btn btn-sm btn-outline-primary" href="users.php?action=edit&id=<?= $user['id'] ?>">แก้ไข</a>
-                                                    <a class="btn btn-sm btn-outline-secondary" href="users.php?action=toggle_status&id=<?= $user['id'] ?>">
+                                                    <a class="btn btn-sm btn-outline-secondary" href="users.php?action=toggle_status&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>">
                                                         <?= $user['status'] === 'active' ? 'ระงับ' : 'เปิดใช้งาน' ?>
                                                     </a>
                                                     
@@ -221,6 +229,7 @@ if ($agRes) {
                             <h2 class="h5 fw-bold mb-3"><?= $editingUser ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้ใหม่' ?></h2>
                             <form method="post">
                                 <input type="hidden" name="user_id" value="<?= $editingUser ? intval($editingUser['id']) : 0 ?>">
+                                <?= csrfField() ?>
                                 <div class="mb-3">
                                     <input class="form-control" type="text" placeholder="ชื่อผู้ใช้ เช่น guest" name="username" value="<?= htmlspecialchars(isset($editingUser['username']) ? $editingUser['username'] : '') ?>" required>
                                 </div>
@@ -274,6 +283,7 @@ if ($agRes) {
                             <div class="card-body">
                                 <h2 class="h5 fw-bold mb-3">รีเซ็ตรหัสผ่าน</h2>
                                 <form method="post" action="users.php?action=reset&id=<?= $userId ?>">
+                                    <?= csrfField() ?>
                                     <div class="mb-3">
                                         <label class="form-label">รหัสผ่านใหม่</label>
                                         <input class="form-control" type="password" name="new_password" required>

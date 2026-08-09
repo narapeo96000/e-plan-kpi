@@ -20,6 +20,7 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_strategy'])) {
+    csrfCheck('strategies.php');
     $strategyId = isset($_POST['strategy_id']) ? intval($_POST['strategy_id']) : 0;
     $fiscalYear = trim(isset($_POST['fiscal_year']) ? $_POST['fiscal_year'] : '');
     $issueNo = intval(isset($_POST['issue_no']) ? $_POST['issue_no'] : 0);
@@ -144,6 +145,7 @@ $thaiYear = date('Y') + 543;
                             <h2 class="h5 fw-bold mb-3"><?= isset($strategy) ? 'แก้ไขยุทธศาสตร์' : 'เพิ่มยุทธศาสตร์ใหม่' ?></h2>
                             <form method="post">
                                 <input type="hidden" name="strategy_id" value="<?= isset($strategy['id']) ? intval($strategy['id']) : 0 ?>">
+                                <?= csrfField() ?>
                                 <div class="mb-3">
                                     <label class="form-label">ปีงบประมาณ</label>
                                     <input class="form-control" type="text" name="fiscal_year" value="<?= htmlspecialchars(isset($strategy['fiscal_year']) ? $strategy['fiscal_year'] : $thaiYear) ?>" required>

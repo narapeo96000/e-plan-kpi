@@ -95,6 +95,7 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrfCheck('schools.php');
     if (isset($_POST['save_school'])) {
         $agencyCodeInput = isset($_POST['agency_code']) ? trim($_POST['agency_code']) : '';
         $agencyName = isset($_POST['agency_name']) ? trim($_POST['agency_name']) : '';
@@ -256,6 +257,7 @@ if ($action === 'edit' && $schoolId > 0) {
                         <h2 class="h5 fw-bold mb-3"><?= $editingSchool ? 'แก้ไขหน่วยงาน' : 'เพิ่มหน่วยงานใหม่' ?></h2>
                         <form method="post">
                             <input type="hidden" name="agency_record_id" value="<?= $editingSchool ? (int)$editingSchool['id'] : 0 ?>">
+                            <?= csrfField() ?>
                             <div class="mb-3">
                                 <label class="form-label">รหัสหน่วยงาน</label>
                                 <input class="form-control" type="text" name="agency_code" value="<?= htmlspecialchars($editingSchool ? $editingSchool['agency_code'] : '') ?>" required>
@@ -282,6 +284,7 @@ if ($action === 'edit' && $schoolId > 0) {
                         <div class="card-body">
                             <h2 class="h5 fw-bold mb-3">รีเซ็ตรหัสผ่าน</h2>
                             <form method="post" action="schools.php?action=reset&id=<?= $schoolId ?>">
+                                <?= csrfField() ?>
                                 <div class="mb-3">
                                     <label class="form-label">รหัสผ่านใหม่</label>
                                     <input class="form-control" type="password" name="new_password" required>

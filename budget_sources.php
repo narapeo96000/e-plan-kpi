@@ -21,6 +21,7 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrfCheck('budget_sources.php');
     if (isset($_POST['save_source'])) {
         $sourceId = isset($_POST['source_id']) ? (int)$_POST['source_id'] : 0;
         $fiscalYearInput = trim(isset($_POST['fiscal_year']) ? $_POST['fiscal_year'] : $fiscalYear);
@@ -74,7 +75,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($action === 'toggle_status' && $sourceId > 0) {
-    $sourceRes = $conn->query("SELECT status FROM budget_income WHERE id = $sourceId LIMIT 1");
+    // CSRF: state-changing action must carry the token
+    $gotToken = isset($_GET['csrf']) ? $_GET['csrf'] : '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $gotToken)) {
+        setFlash('error', 'CSRF token ไม่ถูกต้อง กรุณาลองใหม่');
+        header('Location: budget_sources.php');
+        exit;
+    }
+    $sourceRes = $conn->query("SELECT status, source_name FROM budget_income WHERE id = $sourceId LIMIT 1");
     if ($sourceRes && $row = $sourceRes->fetch_assoc()) {
         $newStatus = $row['status'] === 'active' ? 'inactive' : 'active';
         $conn->query("UPDATE budget_income SET status = '$newStatus' WHERE id = $sourceId");
@@ -160,7 +168,7 @@ if ($action === 'edit' && $sourceId > 0) {
                                                 <td><?= htmlspecialchars($source['status'] === 'active' ? 'ใช้งาน' : 'ระงับ') ?></td>
                                                 <td>
                                                     <a class="btn btn-sm btn-outline-primary" href="budget_sources.php?action=edit&id=<?= (int)$source['id'] ?>">แก้ไข</a>
-                                                    <a class="btn btn-sm btn-outline-secondary" href="budget_sources.php?action=toggle_status&id=<?= (int)$source['id'] ?>"><?= $source['status'] === 'active' ? 'ระงับ' : 'เปิดใช้งาน' ?></a>
+                                                    <a class="btn btn-sm btn-outline-secondary" href="budget_sources.php?action=toggle_status&id=<?= (int)$source['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>"><?= $source['status'] === 'active' ? 'ระงับ' : 'เปิดใช้งาน' ?></a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -177,6 +185,7 @@ if ($action === 'edit' && $sourceId > 0) {
                             <h2 class="h5 fw-bold mb-3"><?= $editingSource ? 'แก้ไขแหล่งงบประมาณ' : 'เพิ่มแหล่งงบประมาณใหม่' ?></h2>
                             <form method="post">
                                 <input type="hidden" name="source_id" value="<?= $editingSource ? (int)$editingSource['id'] : 0 ?>">
+                                <?= csrfField() ?>
                                 <div class="mb-3">
                                     <label class="form-label">ปีงบประมาณ</label>
                                     <input class="form-control" type="text" name="fiscal_year" value="<?= htmlspecialchars($editingSource ? $editingSource['fiscal_year'] : $fiscalYear) ?>" required>

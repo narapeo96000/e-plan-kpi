@@ -16,6 +16,7 @@ requireLogin();
       <?php getFlash(); ?>
       <h1 class="text-2xl font-semibold mb-4">นำเข้า OKR โครงการ</h1>
       <form id="okrForm" action="submit_okr.php" method="post">
+        <?= csrfField() ?>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-sm font-medium mb-1">ปีงบประมาณ</label>

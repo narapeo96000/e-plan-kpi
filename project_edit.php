@@ -58,6 +58,7 @@ if ($uRes) while ($u = $uRes->fetch_assoc()) $users[] = $u;
     <div class="bg-white p-6 rounded shadow">
       <h1 class="text-2xl font-semibold mb-4"><?php echo $editing ? 'แก้ไขโครงการ' : 'สร้างโครงการใหม่'; ?></h1>
       <form id="projectForm" action="project_save.php" method="post">
+        <?= csrfField() ?>
         <input type="hidden" name="id" value="<?php echo $editing ? intval($project['id']) : 0; ?>">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>

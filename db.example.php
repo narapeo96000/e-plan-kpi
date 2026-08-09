@@ -6,6 +6,24 @@
 date_default_timezone_set('Asia/Bangkok');
 header('Content-Type: text/html; charset=UTF-8');
 ini_set('default_charset', 'UTF-8');
+
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('Referrer-Policy: same-origin');
+
+// Harden the session cookie (PHP 5.6 compatible positional args, set before session_start)
+if (ini_get('session.use_only_cookies') !== '1') {
+    ini_set('session.use_only_cookies', '1');
+}
+$isHttps = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && $_SERVER['HTTPS'] !== 'off';
+if (function_exists('session_status')) {
+    $currentParams = session_get_cookie_params();
+    session_set_cookie_params((int)$currentParams['lifetime'], $currentParams['path'], $currentParams['domain'], $isHttps, true);
+} else {
+    session_set_cookie_params(0, '/', '', $isHttps, true);
+}
+
 session_start();
 
 if (!defined('AUDIT_ENABLED')) {
@@ -37,4 +55,7 @@ try {
     $pdo = null;
 }
 
-// ... rest of db.php helpers follow (copy the remainder from your db.php)
+// --- Copy the remainder of helpers from your live db.php ---
+// Security/CSRF helpers used across the app: csrfToken(), csrfField(), csrfCheck(),
+// requireLogin(), isLoggedIn(), isAdmin(), isAdminOrPlan(), logAudit(), etc.
+// Keep db.php in sync with this template whenever you add helpers.
