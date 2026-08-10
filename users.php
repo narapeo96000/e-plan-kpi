@@ -14,12 +14,14 @@ require_once __DIR__ . '/db.php';
 
 requireLogin();
 
-// ควบคุมสิทธิ์: admin จัดการได้ทุกอย่าง, office จัดการได้เฉพาะผู้ใช้ในหน่วยงานของตนเอง, user เข้าถึงไม่ได้
+// ควบคุมสิทธิ์: admin/plan จัดการได้ทุกคน, office จัดการได้เฉพาะผู้ใช้ (user) ในหน่วยงานของตนเอง, user เข้าถึงไม่ได้
 $isAdminUser = isAdmin();
+$isPlanUser = isPlan();
 $isOfficeUser = isOffice();
+$isManageAll = $isAdminUser || $isPlanUser;
 $currentUserId = currentUserId();
 $myAgencyId = $isOfficeUser ? (int)currentAgencyId() : 0;
-if (!$isAdminUser && !$isOfficeUser) {
+if (!$isManageAll && !$isOfficeUser) {
     header('Location: index.php');
     exit;
 }
@@ -129,10 +131,15 @@ if ($action === 'toggle_status' && $userId > 0) {
         header('Location: users.php');
         exit;
     }
-    $userRes = $conn->query("SELECT username, status, agency_id FROM users WHERE id = $userId LIMIT 1");
+    $userRes = $conn->query("SELECT username, status, role, agency_id FROM users WHERE id = $userId LIMIT 1");
     if ($userRes && $row = $userRes->fetch_assoc()) {
         if ($isOfficeUser && (int)$row['agency_id'] !== $myAgencyId) {
             setFlash('error', 'ไม่สามารถระงับ/เปิดใช้งานผู้ใช้ต่างหน่วยงานได้');
+            header('Location: users.php');
+            exit;
+        }
+        if ($isOfficeUser && $row['role'] !== 'user') {
+            setFlash('error', 'ผู้ประสานงานหน่วยงานสามารถจัดการได้เฉพาะผู้ใช้ทั่วไป (user) เท่านั้น');
             header('Location: users.php');
             exit;
         }
@@ -152,8 +159,8 @@ if ($action === 'toggle_status' && $userId > 0) {
     exit;
 }
 
-// ลบผู้ใช้ — เฉพาะ admin เท่านั้น
-if ($action === 'delete' && $userId > 0 && $isAdminUser) {
+// ลบผู้ใช้ — เฉพาะ admin/plan เท่านั้น
+if ($action === 'delete' && $userId > 0 && $isManageAll) {
     $gotToken = isset($_GET['csrf']) ? $_GET['csrf'] : '';
     if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $gotToken)) {
         setFlash('error', 'CSRF token ไม่ถูกต้อง กรุณาลองใหม่');
@@ -184,9 +191,15 @@ if ($action === 'delete' && $userId > 0 && $isAdminUser) {
 
 if ($action === 'reset' && $userId > 0 && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
     if ($isOfficeUser) {
-        $tRes = $conn->query("SELECT agency_id FROM users WHERE id = $userId LIMIT 1");
-        if ($tRes && ($tRow = $tRes->fetch_assoc()) && (int)$tRow['agency_id'] !== $myAgencyId) {
+        $tRes = $conn->query("SELECT role, agency_id FROM users WHERE id = $userId LIMIT 1");
+        $tRow = ($tRes) ? $tRes->fetch_assoc() : null;
+        if ($tRow && (int)$tRow['agency_id'] !== $myAgencyId) {
             setFlash('error', 'ไม่สามารถรีเซ็ตรหัสผ่านผู้ใช้ต่างหน่วยงานได้');
+            header('Location: users.php');
+            exit;
+        }
+        if ($tRow && $tRow['role'] !== 'user') {
+            setFlash('error', 'ผู้ประสานงานหน่วยงานสามารถรีเซ็ตรหัสผ่านได้เฉพาะผู้ใช้ทั่วไป (user) เท่านั้น');
             header('Location: users.php');
             exit;
         }
@@ -227,6 +240,11 @@ if ($action === 'edit' && $userId > 0) {
             header('Location: users.php');
             exit;
         }
+        if ($isOfficeUser && $editingUser['role'] !== 'user') {
+            setFlash('error', 'ผู้ประสานงานหน่วยงานสามารถแก้ไขได้เฉพาะผู้ใช้ทั่วไป (user) เท่านั้น');
+            header('Location: users.php');
+            exit;
+        }
     }
 }
 
@@ -259,7 +277,7 @@ if ($agRes) {
                         <div>
                             <div class="text-uppercase section-title mb-2">👥 ผู้ใช้ระบบ</div>
                             <h1 class="h3 fw-bold mb-2">จัดการผู้ใช้งาน</h1>
-                            <p class="text-muted mb-0"><?= $isAdminUser ? 'ผู้ดูแลระบบสามารถเพิ่ม ลบ แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานบัญชีทั้งหมดได้' : 'ผู้ประสานงานหน่วยงานสามารถเพิ่ม แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานเฉพาะผู้ใช้ในหน่วยงานของตนเองเท่านั้น' ?></p>
+                            <p class="text-muted mb-0"><?= $isManageAll ? 'ผู้ดูแลระบบ/ผู้กำหนดตัวชี้วัด KPI สามารถเพิ่ม ลบ แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานบัญชีทั้งหมดได้' : 'ผู้ประสานงานหน่วยงานสามารถเพิ่ม แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานเฉพาะผู้ใช้ทั่วไป (user) ในหน่วยงานของตนเองเท่านั้น' ?></p>
                         </div>
                     </div>
                 </div>
@@ -302,7 +320,7 @@ if ($agRes) {
                                                     <a class="btn btn-sm btn-outline-secondary" href="users.php?action=toggle_status&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>">
                                                         <?= $user['status'] === 'active' ? 'ระงับ' : 'เปิดใช้งาน' ?>
                                                     </a>
-                                                    <?php if ($isAdminUser && (int)$user['id'] !== $currentUserId): ?>
+                                                    <?php if ($isManageAll && (int)$user['id'] !== $currentUserId): ?>
                                                         <a class="btn btn-sm btn-outline-danger" href="users.php?action=delete&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>" onclick="return confirm('ยืนยันการลบผู้ใช้ <?= htmlspecialchars($user['name'], ENT_QUOTES) ?> ?');">ลบ</a>
                                                     <?php endif; ?>
                                                 </td>

@@ -217,8 +217,8 @@ function navParentShow($pages) {
       <li class="sidebar-divider"></li>
       <li class="sidebar-label"><span class="sidebar-text">ระบบ & ความปลอดภัย</span></li>
 
-      <!-- Admin only items -->
-      <?php if (isAdmin() || isOffice()): ?>
+      <!-- Admin / Plan / Office items -->
+      <?php if (isAdmin() || isPlan() || isOffice()): ?>
       <li class="sidebar-item">
         <a class="sidebar-link <?= navActive('users') ?>" href="users.php">
           <span class="sidebar-icon">👥</span>
@@ -412,8 +412,8 @@ function navParentShow($pages) {
         </div>
       </li>
 
-      <!-- Admin section -->
-      <?php if (isAdmin() || isOffice()): ?>
+      <!-- Admin / Plan / Office section -->
+      <?php if (isAdmin() || isPlan() || isOffice()): ?>
       <li class="mobile-nav-section">ระบบ & ความปลอดภัย</li>
       <li class="mobile-nav-item">
         <a class="mobile-nav-link <?= navActive('users') ?>" href="users.php">
