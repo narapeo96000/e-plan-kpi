@@ -253,11 +253,24 @@ if ($action === 'reset' && $userId > 0 && $_SERVER['REQUEST_METHOD'] === 'POST' 
     }
 }
 
+$filterRole = isset($_GET['role']) ? trim($_GET['role']) : '';
+$validRoles = array('admin', 'plan', 'office', 'user');
+if (!in_array($filterRole, $validRoles, true)) {
+    $filterRole = '';
+}
+
 $users = array();
 $userSql = "SELECT u.*, a.agency_name, a.agency_code FROM users u LEFT JOIN agencies a ON a.id = u.agency_id";
+$whereClauses = array();
 if ($isOfficeUser) {
     // office: เห็นเฉพาะผู้ใช้ในหน่วยงานของตนเอง
-    $userSql .= " WHERE u.agency_id = " . (int)$myAgencyId;
+    $whereClauses[] = "u.agency_id = " . (int)$myAgencyId;
+}
+if (!empty($filterRole)) {
+    $whereClauses[] = "u.role = '" . $conn->real_escape_string($filterRole) . "'";
+}
+if (count($whereClauses) > 0) {
+    $userSql .= " WHERE " . implode(' AND ', $whereClauses);
 }
 $userSql .= " ORDER BY u.id ASC";
 $result = $conn->query($userSql);
@@ -322,6 +335,53 @@ if ($isOfficeUser) {
             <?php endif; ?>
             <?php getFlash(); ?>
 
+            <!-- ตัวกรองตามบทบาท -->
+            <?php
+            $roleCounts = array('all' => 0, 'admin' => 0, 'plan' => 0, 'office' => 0, 'user' => 0);
+            $countSql = "SELECT u.role, COUNT(*) c FROM users u";
+            if ($isOfficeUser) {
+                $countSql .= " WHERE u.agency_id = " . (int)$myAgencyId;
+            }
+            $countSql .= " GROUP BY u.role";
+            $cRes = $conn->query($countSql);
+            if ($cRes) {
+                while ($crow = $cRes->fetch_assoc()) {
+                    $rkey = isset($crow['role']) ? $crow['role'] : '';
+                    if (isset($roleCounts[$rkey])) {
+                        $roleCounts[$rkey] = (int)$crow['c'];
+                        $roleCounts['all'] += (int)$crow['c'];
+                    }
+                }
+            }
+            $roleFilterTabs = array(
+                'all'    => 'ทั้งหมด',
+                'admin'  => 'ผู้ดูแลระบบ',
+                'plan'   => 'ผู้กำหนด KPI',
+                'office' => 'ผู้ประสานงานหน่วยงาน',
+                'user'   => 'ผู้ใช้ทั่วไป',
+            );
+            ?>
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body py-3">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="text-muted small me-1">กรองตามสิทธิ์:</span>
+                        <?php foreach ($roleFilterTabs as $rkey => $rlabel): ?>
+                            <?php
+                            if ($isOfficeUser && $rkey !== 'all' && $rkey !== 'user') {
+                                continue; // office เห็นได้เฉพาะผู้ใช้ทั่วไป
+                            }
+                            $q = $rkey === 'all' ? 'users.php' : 'users.php?role=' . urlencode($rkey);
+                            $active = ($filterRole === $rkey);
+                            ?>
+                            <a class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-secondary' ?>" href="<?= $q ?>">
+                                <?= htmlspecialchars($rlabel) ?>
+                                <span class="badge <?= $active ? 'text-bg-light' : 'text-bg-secondary' ?> ms-1"><?= (int)$roleCounts[$rkey] ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <div class="table-responsive">
@@ -337,6 +397,11 @@ if ($isOfficeUser) {
                                 </tr>
                             </thead>
                             <tbody>
+                                <?php if (count($users) === 0): ?>
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">ไม่พบข้อมูลผู้ใช้ในเกณฑ์ที่เลือก</td>
+                                    </tr>
+                                <?php endif; ?>
                                 <?php foreach ($users as $index => $user): ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
