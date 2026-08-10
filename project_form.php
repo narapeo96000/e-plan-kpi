@@ -105,12 +105,32 @@ if (isset($_GET['id'])) {
 $kpiFormYear = $isEdit && !empty($project['fiscal_year']) ? $project['fiscal_year'] : $fiscal_year;
 $kpiDefs = array();
 try {
-    $stmtK = $pdo->prepare("SELECT id, kpi_name, target_percent, scope_type, success_indicator FROM kpi_definitions WHERE status = 'active' AND fiscal_year = ? ORDER BY id ASC");
+    $stmtK = $pdo->prepare("SELECT id, objective_id, kpi_name, target_percent, scope_type, success_indicator FROM kpi_definitions WHERE status = 'active' AND fiscal_year = ? ORDER BY id ASC");
     $stmtK->execute(array($kpiFormYear));
     $kpiDefs = $stmtK->fetchAll();
 } catch (Exception $e) {
     $kpiDefs = array();
 }
+
+// Map KPI -> objective -> strategy_id (เพื่อกรอง KPI ตามยุทธศาสตร์ที่เลือก)
+$objectivesByYear = array();
+try {
+    $stmtO = $pdo->prepare("SELECT id, strategy_id FROM objectives WHERE fiscal_year = ? AND (status = 'active' OR status IS NULL)");
+    $stmtO->execute(array($kpiFormYear));
+    $objectivesByYear = $stmtO->fetchAll();
+} catch (Exception $e) {
+    $objectivesByYear = array();
+}
+$objectiveStrategyMap = array();
+foreach ($objectivesByYear as $o) {
+    $objectiveStrategyMap[(int)$o['id']] = (int)$o['strategy_id'];
+}
+$kpiStrategyMap = array();
+foreach ($kpiDefs as $k) {
+    $objId = isset($k['objective_id']) ? (int)$k['objective_id'] : 0;
+    $kpiStrategyMap[(int)$k['id']] = isset($objectiveStrategyMap[$objId]) ? $objectiveStrategyMap[$objId] : 0;
+}
+$kpiStrategyMapJson = json_encode($kpiStrategyMap, JSON_UNESCAPED_UNICODE);
 
 // Default values (PHP 5.6 compatible)
 $defaults = array();
@@ -263,7 +283,7 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                             <?php else: ?>
                                 <?php foreach ($strategicIssues as $si): ?>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="strategic_issues[]" value="<?= (int)$si['id'] ?>" id="si_<?= (int)$si['id'] ?>" <?= in_array((int)$si['id'], $defaults['strategic_issue_ids']) ? 'checked' : '' ?>>
+                                        <input class="form-check-input strategy-check" type="checkbox" name="strategic_issues[]" value="<?= (int)$si['id'] ?>" id="si_<?= (int)$si['id'] ?>" <?= in_array((int)$si['id'], $defaults['strategic_issue_ids']) ? 'checked' : '' ?>>
                                         <label class="form-check-label" for="si_<?= (int)$si['id'] ?>">
                                             ยุทธศาสตร์ที่ <?= htmlspecialchars($si['issue_no']) ?>: <?= htmlspecialchars($si['issue_name']) ?>
                                         </label>
@@ -287,6 +307,45 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                             <input class="form-check-input" type="checkbox" id="isOfficeTotal" name="is_office_total" value="1" <?= checked($defaults['is_office_total'], 1) ?>>
                             <label class="form-check-label" for="isOfficeTotal">แสดงเป็นงบประมาณภาพรวม</label>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ===== ความสอดคล้องตัวชี้วัดร่วม KPI (อยู่ใต้ยุทธศาสตร์, กรองตามยุทธศาสตร์ที่เลือก) ===== -->
+                <div class="row g-3 mt-2">
+                    <div class="col-12">
+                        <label class="form-label">🎯 ความสอดคล้องตัวชี้วัดร่วม KPI ของจังหวัด</label>
+                        <?php if (empty($kpiDefs)): ?>
+                            <div class="alert alert-light border py-2 small mb-0">
+                                ยังไม่มีตัวชี้วัด KPI ที่ใช้งานในปีงบประมาณ <?= htmlspecialchars($kpiFormYear) ?> — ผู้กำหนดตัวชี้วัด (<?= roleLabel('plan') ?>) ต้องเพิ่มก่อนผ่านเมนู "กำหนดตัวชี้วัด KPI"
+                            </div>
+                        <?php else: ?>
+                            <div class="small text-muted mb-2">เลือกตัวชี้วัด KPI ร่วมที่โครงการนี้สอดคล้อง/สนับสนุน — ระบบจะแสดงเฉพาะ KPI ที่ตรงกับยุทธศาสตร์ที่เลือกด้านบน</div>
+                            <div class="border rounded-3 p-3 bg-light" id="kpiBox">
+                                <div class="row g-3">
+                                    <?php foreach ($kpiDefs as $k): ?>
+                                        <?php $kpiSid = isset($kpiStrategyMap[(int)$k['id']]) ? (int)$kpiStrategyMap[(int)$k['id']] : 0; ?>
+                                        <div class="col-12 col-md-6 kpi-item" data-strategy="<?= $kpiSid ?>">
+                                            <div class="form-check border rounded-3 p-3 bg-white h-100 mb-0">
+                                                <input class="form-check-input kpi-check" type="checkbox" name="kpi_ids[]" value="<?= (int)$k['id'] ?>" id="kpi_<?= (int)$k['id'] ?>" <?= in_array((int)$k['id'], $defaults['kpi_ids']) ? 'checked' : '' ?>>
+                                                <label class="form-check-label w-100" for="kpi_<?= (int)$k['id'] ?>">
+                                                    <div class="fw-semibold">
+                                                        <?= htmlspecialchars($k['kpi_name']) ?>
+                                                        <span class="badge bg-primary-subtle text-primary-emphasis ms-1"><?= htmlspecialchars(rtrim(rtrim(number_format((float)$k['target_percent'], 2), '0'), '.')) ?>%</span>
+                                                    </div>
+                                                    <?php if (!empty($k['success_indicator'])): ?>
+                                                        <div class="small text-muted mt-1"><?= htmlspecialchars($k['success_indicator']) ?></div>
+                                                    <?php endif; ?>
+                                                    <?php if ($k['scope_type'] === 'province'): ?>
+                                                        <div class="small text-muted mt-1">ระดับ: จังหวัด</div>
+                                                    <?php endif; ?>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div class="small text-muted mt-2" id="kpiFilterHint"></div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -362,41 +421,6 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                         <div class="form-text">เลือกจากรายการ หรือเลือก "เพิ่มแหล่งงบประมาณใหม่" เพื่อพิมพ์เอง</div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- ===== หมวด 1.5: ความสอดคล้องตัวชี้วัดร่วม KPI (1-to-many) ===== -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-body p-4">
-                <h3 class="h5 fw-bold mb-3">🎯 ความสอดคล้องตัวชี้วัดร่วม KPI ของจังหวัด</h3>
-                <div class="small text-muted mb-3">เลือกตัวชี้วัด KPI ร่วมที่โครงการนี้สอดคล้อง/สนับสนุน — 1 โครงการสามารถสอดคล้องได้มากกว่า 1 KPI</div>
-                <?php if (empty($kpiDefs)): ?>
-                    <div class="alert alert-light border py-2 small mb-0">
-                        ยังไม่มีตัวชี้วัด KPI ที่ใช้งานในปีงบประมาณ <?= htmlspecialchars($kpiFormYear) ?> — ผู้กำหนดตัวชี้วัด (<?= roleLabel('plan') ?>) ต้องเพิ่มก่อนผ่านเมนู "กำหนดตัวชี้วัด KPI"
-                    </div>
-                <?php else: ?>
-                    <div class="row g-3">
-                        <?php foreach ($kpiDefs as $k): ?>
-                            <div class="col-12 col-md-6">
-                                <div class="form-check border rounded-3 p-3 bg-light h-100">
-                                    <input class="form-check-input kpi-check" type="checkbox" name="kpi_ids[]" value="<?= (int)$k['id'] ?>" id="kpi_<?= (int)$k['id'] ?>" <?= in_array((int)$k['id'], $defaults['kpi_ids']) ? 'checked' : '' ?>>
-                                    <label class="form-check-label w-100" for="kpi_<?= (int)$k['id'] ?>">
-                                        <div class="fw-semibold">
-                                            <?= htmlspecialchars($k['kpi_name']) ?>
-                                            <span class="badge bg-primary-subtle text-primary-emphasis ms-1"><?= htmlspecialchars(rtrim(rtrim(number_format((float)$k['target_percent'], 2), '0'), '.')) ?>%</span>
-                                        </div>
-                                        <?php if (!empty($k['success_indicator'])): ?>
-                                            <div class="small text-muted mt-1"><?= htmlspecialchars($k['success_indicator']) ?></div>
-                                        <?php endif; ?>
-                                        <?php if ($k['scope_type'] === 'province'): ?>
-                                            <div class="small text-muted mt-1">ระดับ: จังหวัด</div>
-                                        <?php endif; ?>
-                                    </label>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
             </div>
         </div>
 
@@ -547,11 +571,7 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                                             <td class="small text-muted text-nowrap"><?= htmlspecialchars((string)$doc['uploaded_by']) ?></td>
                                             <td class="small text-muted text-end text-nowrap"><?= formatBytes((int)$doc['file_size']) ?></td>
                                             <td class="text-end">
-                                                <form method="post" action="document_delete.php" class="d-inline" onsubmit="return confirm('ยืนยันการลบไฟล์นี้?');">
-                                                    <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
-                                                    <input type="hidden" name="id" value="<?= (int)$doc['id'] ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">🗑 ลบ</button>
-                                                </form>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteDocModal" data-id="<?= (int)$doc['id'] ?>" data-name="<?= htmlspecialchars($doc['original_name']) ?>">🗑 ลบ</button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -563,24 +583,22 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                     <?php endif; ?>
 
                     <?php if (count($projectDocuments) < 5): ?>
-                        <form method="post" action="document_upload.php" enctype="multipart/form-data" class="border rounded-3 p-3 bg-light">
-                            <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
-                            <input type="hidden" name="project_id" value="<?= (int)$project['id'] ?>">
+                        <div class="border rounded-3 p-3 bg-light">
                             <div class="row g-2 align-items-end">
                                 <div class="col-12 col-md-5">
                                     <label class="form-label small mb-1">เลือกไฟล์ (เลือกได้หลายไฟล์)</label>
-                                    <input type="file" name="documents[]" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.jpg,.jpeg,.png,.gif">
+                                    <input type="file" name="documents[]" form="docUploadForm" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.jpg,.jpeg,.png,.gif">
                                     <div class="form-text small">PDF / Word / Excel / รูปภาพ — สูงสุด <?= 5 - count($projectDocuments) ?> ไฟล์, ไฟล์ละไม่เกิน 10 MB</div>
                                 </div>
                                 <div class="col-12 col-md-5">
                                     <label class="form-label small mb-1">รายละเอียด / ชื่อไฟล์</label>
-                                    <input type="text" name="description" class="form-control" placeholder="เช่น หนังสือสั่งการ/รายงานผล/ภาพกิจกรรม" maxlength="255">
+                                    <input type="text" name="description" form="docUploadForm" class="form-control" placeholder="เช่น หนังสือสั่งการ/รายงานผล/ภาพกิจกรรม" maxlength="255">
                                 </div>
                                 <div class="col-12 col-md-2 text-md-end">
-                                    <button type="submit" class="btn btn-primary w-100">📎 แนบไฟล์</button>
+                                    <button type="submit" form="docUploadForm" class="btn btn-primary w-100">📎 แนบไฟล์</button>
                                 </div>
                             </div>
-                        </form>
+                        </div>
                     <?php else: ?>
                         <div class="alert alert-warning py-2 small mb-0">⚠️ แนบไฟล์ครบ 5 ไฟล์แล้ว (สูงสุด 5 ไฟล์ต่อโครงการ)</div>
                     <?php endif; ?>
@@ -633,6 +651,14 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
     </form>
 </div>
 
+<!-- ===== Upload form แยกจาก projectForm (HTML ห้าม form ซ้อน form) ===== -->
+<?php if ($isEdit): ?>
+<form id="docUploadForm" method="post" action="document_upload.php" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+    <input type="hidden" name="project_id" value="<?= (int)$project['id'] ?>">
+</form>
+<?php endif; ?>
+
 <!-- ===== Preview Modal ===== -->
 <div class="modal fade" id="previewModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -651,6 +677,28 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
 </div>
 
     </main>
+</div>
+<div class="modal fade" id="deleteDocModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="document_delete.php">
+                <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+                <input type="hidden" name="id" id="deleteDocId" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">ยืนยันการลบไฟล์</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    ต้องการลบไฟล์ <span class="fw-bold text-danger" id="deleteDocName"></span> ใช่หรือไม่?<br>
+                    <span class="text-muted small">การลบจะไม่สามารถกู้คืนได้</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">ยืนยันการลบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -851,6 +899,49 @@ function getCheckedStrategies() {
         if (label) names.push(label.textContent.trim());
     });
     return names.join(', ');
+}
+
+// ===== กรอง KPI ตามยุทธศาสตร์ที่เลือก (data-strategy on .kpi-item) =====
+const kpiStrategyMap = <?= $kpiStrategyMapJson ?: '{}' ?>;
+
+function filterKpis() {
+    const selected = [];
+    document.querySelectorAll('input[name="strategic_issues[]"]:checked').forEach(function (c) {
+        selected.push(parseInt(c.value, 10));
+    });
+    let visible = 0;
+    let total = 0;
+    document.querySelectorAll('.kpi-item').forEach(function (item) {
+        total++;
+        const strat = parseInt(item.getAttribute('data-strategy'), 10) || 0;
+        const checked = item.querySelector('.kpi-check') ? item.querySelector('.kpi-check').checked : false;
+        const show = checked || selected.length === 0 || strat === 0 || selected.indexOf(strat) !== -1;
+        item.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const hint = document.getElementById('kpiFilterHint');
+    if (hint) {
+        if (selected.length === 0) {
+            hint.textContent = 'แสดง KPI ทั้งหมด ' + total + ' รายการ — เลือกยุทธศาสตร์ด้านบนเพื่อกรอง';
+        } else {
+            hint.textContent = 'แสดง KPI ' + visible + '/' + total + ' รายการ ที่สอดคล้องกับยุทธศาสตร์ที่เลือก (รวมที่เลือกไว้แล้ว)';
+        }
+    }
+}
+
+document.querySelectorAll('input[name="strategic_issues[]"]').forEach(function (cb) {
+    cb.addEventListener('change', filterKpis);
+});
+filterKpis();
+
+const deleteDocModal = document.getElementById('deleteDocModal');
+if (deleteDocModal) {
+    document.querySelectorAll('[data-bs-target="#deleteDocModal"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('deleteDocId').value = btn.getAttribute('data-id');
+            document.getElementById('deleteDocName').textContent = btn.getAttribute('data-name');
+        });
+    });
 }
 
 function getCheckedKpis() {

@@ -224,7 +224,7 @@ $kpiSql = "
            (SELECT COUNT(*) FROM project_kpis pk WHERE pk.kpi_id = k.id) AS aligned_projects
     FROM kpi_definitions k
     WHERE k.fiscal_year = '{$escapedYear}' AND k.status = 'active'
-    ORDER BY k.id ASC
+    ORDER BY k.sort_order ASC, k.id ASC
 ";
 $kpiRes = $conn->query($kpiSql);
 $kpis = array();

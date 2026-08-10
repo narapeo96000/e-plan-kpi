@@ -281,6 +281,46 @@ CREATE TABLE IF NOT EXISTS `project_documents` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
+-- download_docs: เอกสารสำหรับดาวน์โหลด (upload โดย admin)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `download_docs` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `doc_url` VARCHAR(500) DEFAULT NULL,
+  `original_name` VARCHAR(255) NOT NULL,
+  `stored_name` VARCHAR(255) NOT NULL,
+  `file_path` VARCHAR(500) NOT NULL,
+  `file_size` INT UNSIGNED DEFAULT 0,
+  `mime_type` VARCHAR(120) DEFAULT NULL,
+  `uploaded_by` VARCHAR(100) DEFAULT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'active',
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_doc_status` (`status`),
+  KEY `idx_doc_sort` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- download_docs.doc_url: เอกสารแบบลิงค์ (สำหรับ DB ที่มีอยู่เดิม)
+-- -----------------------------------------------------------------------------
+SET @doc_url_col_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'download_docs'
+    AND COLUMN_NAME = 'doc_url'
+);
+SET @doc_url_col_sql := IF(@doc_url_col_exists = 0,
+  'ALTER TABLE `download_docs` ADD COLUMN `doc_url` VARCHAR(500) DEFAULT NULL AFTER `description`',
+  'SELECT 1');
+PREPARE doc_url_stmt FROM @doc_url_col_sql;
+EXECUTE doc_url_stmt;
+DEALLOCATE PREPARE doc_url_stmt;
+
+-- -----------------------------------------------------------------------------
 -- 4) project_strategic_issues: 1-to-many strategy links for projects and OKRs
 -- -----------------------------------------------------------------------------
 
@@ -308,6 +348,24 @@ SET `office_name` = 'ระบบติดตาม และรายงาน�
 WHERE `id` = 1;
 
 -- -----------------------------------------------------------------------------
+-- 6) objectives: เป้าประสงค์ (1 ยุทธศาสตร์ มีได้หลายเป้าประสงค์)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `objectives` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `fiscal_year` VARCHAR(4) NOT NULL,
+  `strategy_id` INT UNSIGNED NOT NULL,
+  `objective_name` TEXT NOT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'active',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_obj_year` (`fiscal_year`),
+  KEY `idx_obj_strategy` (`strategy_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
 -- 6) kpi_definitions: shared KPI indicators defined by the `plan` / `admin` roles
 --    (ชื่อ KPI, ค่าเป้าหมายร้อยละ, ตัวชี้วัดความสำเร็จ) for the province & all agencies
 -- -----------------------------------------------------------------------------
@@ -315,10 +373,12 @@ WHERE `id` = 1;
 CREATE TABLE IF NOT EXISTS `kpi_definitions` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `fiscal_year` VARCHAR(4) NOT NULL,
+  `objective_id` INT UNSIGNED DEFAULT NULL,
   `kpi_name` VARCHAR(255) NOT NULL,
   `target_percent` DECIMAL(5,2) NOT NULL DEFAULT 0.00,
   `success_indicator` TEXT DEFAULT NULL,
   `scope_type` VARCHAR(20) NOT NULL DEFAULT 'province',
+  `sort_order` INT NOT NULL DEFAULT 0,
   `status` VARCHAR(20) NOT NULL DEFAULT 'active',
   `created_by` VARCHAR(50) DEFAULT NULL,
   `updated_by` VARCHAR(50) DEFAULT NULL,
@@ -326,7 +386,8 @@ CREATE TABLE IF NOT EXISTS `kpi_definitions` (
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_kpi_year` (`fiscal_year`),
-  KEY `idx_kpi_scope` (`scope_type`)
+  KEY `idx_kpi_scope` (`scope_type`),
+  KEY `idx_kpi_objective` (`objective_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
@@ -373,27 +434,71 @@ WHERE `fiscal_year` = '2569' AND `issue_no` = 5;
 
 DELETE FROM `strategic_issues` WHERE `fiscal_year` = '2569' AND `issue_no` > 5;
 
--- 8b) kpi_definitions: ลบ KPI ปี 2569 ชุดเดิม แล้วนำเข้า 10 ตัวชี้วัดใหม่ตามแผนฯ
+-- 8b) objectives: เป้าประสงค์เริ่มต้นปี 2569 (map ด้วย fiscal_year + issue_no)
+INSERT INTO `objectives` (`id`, `fiscal_year`, `strategy_id`, `objective_name`, `sort_order`, `status`)
+SELECT 7, '2569', `id`, '1.1 เพื่อให้ผู้เรียนมีสมรรถนะพื้นฐานที่จำเป็นตามช่วงวัย', 1, 'active'
+FROM `strategic_issues` WHERE `fiscal_year` = '2569' AND `issue_no` = 1
+ON DUPLICATE KEY UPDATE `objective_name` = VALUES(`objective_name`), `strategy_id` = VALUES(`strategy_id`);
+
+INSERT INTO `objectives` (`id`, `fiscal_year`, `strategy_id`, `objective_name`, `sort_order`, `status`)
+SELECT 1, '2569', `id`, '2.1. ผู้เรียนมีสมรรถนะอาชีพและเส้นทางอาชีพที่ชัดเจน', 1, 'active'
+FROM `strategic_issues` WHERE `fiscal_year` = '2569' AND `issue_no` = 2
+ON DUPLICATE KEY UPDATE `objective_name` = VALUES(`objective_name`), `strategy_id` = VALUES(`strategy_id`);
+
+INSERT INTO `objectives` (`id`, `fiscal_year`, `strategy_id`, `objective_name`, `sort_order`, `status`)
+SELECT 2, '2569', `id`, '3.1. เพื่อให้บุคลากรทางการศึกษามีสมรรถนะในการออกแบบการจัดการเรียนรู้เชิงรุก (Active Learning) และการวัดผลตามสภาพจริงที่สะท้อนศักยภาพผู้เรียนผลการประเมินคุณลักษณะอันพึงประสงค์ของผู้เรียน (ค่าเป้าหมาย ร้อยละ 60%)', 1, 'active'
+FROM `strategic_issues` WHERE `fiscal_year` = '2569' AND `issue_no` = 3
+ON DUPLICATE KEY UPDATE `objective_name` = VALUES(`objective_name`), `strategy_id` = VALUES(`strategy_id`);
+
+INSERT INTO `objectives` (`id`, `fiscal_year`, `strategy_id`, `objective_name`, `sort_order`, `status`)
+SELECT 4, '2569', `id`, '4.1 เพื่อพัฒนาระบบนิเทศและติดตามผลที่มุ่งเน้นการให้คำปรึกษาเพื่อการพัฒนา ลดภาระงานเอกสาร และสะท้อนผลลัพธ์เชิงพื้นที่อย่างเป็นรูปธรรม', 1, 'active'
+FROM `strategic_issues` WHERE `fiscal_year` = '2569' AND `issue_no` = 4
+ON DUPLICATE KEY UPDATE `objective_name` = VALUES(`objective_name`), `strategy_id` = VALUES(`strategy_id`);
+
+INSERT INTO `objectives` (`id`, `fiscal_year`, `strategy_id`, `objective_name`, `sort_order`, `status`)
+SELECT 6, '2569', `id`, '5.1. เพื่อเสริมสร้างความเข้มแข็งของภาคีเครือข่ายทางการศึกษาในพื้นที่ และส่งเสริมให้สถานศึกษาเป็นศูนย์กลางการเรียนรู้ตลอดชีวิตของชุมชน', 1, 'active'
+FROM `strategic_issues` WHERE `fiscal_year` = '2569' AND `issue_no` = 5
+ON DUPLICATE KEY UPDATE `objective_name` = VALUES(`objective_name`), `strategy_id` = VALUES(`strategy_id`);
+
+-- 8b-1) ลบเป้าประสงค์เดิมที่ยกเลิกใช้แล้ว (id 3 และ id 5 ของปี 2569)
+DELETE FROM `objectives` WHERE `fiscal_year` = '2569' AND `id` IN (3, 5);
+
+-- 8c) kpi_definitions: ลบ KPI ปี 2569 ชุดเดิม แล้วนำเข้า 9 ตัวชี้วัดใหม่ตามแผนฯ
 --     (project_kpis ไม่มี FK กับ kpi_definitions → ลบ/แทนที่ได้ปลอดภัย;
 --      โครงการที่เคยผูก KPI เดิมไว้ต้องไปผูก KPI ชุดใหม่ผ่านระบบอีกครั้ง)
 DELETE FROM `kpi_definitions` WHERE `fiscal_year` = '2569';
 
-INSERT INTO `kpi_definitions` (`id`, `fiscal_year`, `kpi_name`, `target_percent`, `success_indicator`, `scope_type`, `status`, `created_by`) VALUES
-(1, '2569', 'ร้อยละของผู้เรียนที่มีระดับการพัฒนาสมรรถนะตามช่วงวัยตามเกณฑ์ที่กำหนด', 60.00, 'ผู้เรียนได้รับการประเมินสมรรถนะตามช่วงวัยและมีผลการพัฒนาตามเกณฑ์ที่กำหนด', 'province', 'active', 'admin'),
-(2, '2569', 'อัตราการคงอยู่ในระบบการศึกษาของผู้เรียนในแต่ละปีการศึกษา', 60.00, 'ผู้เรียนคงอยู่ในระบบการศึกษาในแต่ละปีการศึกษาตามเกณฑ์ที่กำหนด', 'province', 'active', 'admin'),
-(3, '2569', 'ร้อยละของผู้เรียนที่มีคุณลักษณะที่พึงประสงค์ตามกรอบคุณลักษณะของจังหวัด อยู่ในระดับ "ดี" ขึ้นไป', 70.00, 'ผู้เรียนมีคุณลักษณะที่พึงประสงค์ตามกรอบคุณลักษณะของจังหวัดอยู่ในระดับ "ดี" ขึ้นไป', 'province', 'active', 'admin'),
-(4, '2569', 'ร้อยละของผู้เรียนที่ผ่านการประเมินสมรรถนะอาชีพตามสาขาอาชีพหรือทักษะอาชีพที่สอดคล้องกับบริบทพื้นที่จังหวัดนราธิวาส', 60.00, 'ผู้เรียนผ่านการประเมินสมรรถนะอาชีพตามสาขาอาชีพหรือทักษะอาชีพที่สอดคล้องกับบริบทพื้นที่จังหวัดนราธิวาส', 'province', 'active', 'admin'),
-(5, '2569', 'ร้อยละของสถานศึกษาที่จัดโครงงานหรือกิจกรรมผู้ประกอบการเพื่อสังคม (Social Entrepreneurship Project/Activity) อย่างน้อย 1 กิจกรรมต่อปีการศึกษา', 60.00, 'สถานศึกษาจัดโครงงานหรือกิจกรรมผู้ประกอบการเพื่อสังคมอย่างน้อย 1 กิจกรรมต่อปีการศึกษา', 'province', 'active', 'admin'),
-(6, '2569', 'ร้อยละของสถานศึกษาที่บูรณาการทุนวัฒนธรรมท้องถิ่นเข้าในหลักสูตรหรือกิจกรรมการเรียนการสอนอย่างเป็นรูปธรรม', 60.00, 'สถานศึกษาบูรณาการทุนวัฒนธรรมท้องถิ่นเข้าในหลักสูตรหรือกิจกรรมการเรียนการสอนอย่างเป็นรูปธรรม', 'province', 'active', 'admin'),
-(7, '2569', 'ร้อยละของผู้เรียนที่ได้รับการประเมินสมรรถนะจากการปฏิบัติจริง ภาระงาน หรือแฟ้มสะสมงาน (Portfolio)', 60.00, 'ผู้เรียนได้รับการประเมินสมรรถนะจากการปฏิบัติจริง ภาระงาน หรือแฟ้มสะสมงาน (Portfolio)', 'province', 'active', 'admin'),
-(8, '2569', 'ร้อยละของสถานศึกษาที่รายงานผลลัพธ์เชิงพื้นที่ (Impact) ต่อชุมชน ผู้เรียน หรือพื้นที่โดยรอบ อย่างน้อย 1 เรื่องต่อปีการศึกษา', 60.00, 'สถานศึกษารายงานผลลัพธ์เชิงพื้นที่ (Impact) ต่อชุมชน ผู้เรียน หรือพื้นที่โดยรอบอย่างน้อย 1 เรื่องต่อปีการศึกษา', 'province', 'active', 'admin'),
-(9, '2569', 'ร้อยละของสถานศึกษาที่จัดการเรียนรู้ร่วมกับชุมชนอย่างน้อย 1 รูปแบบต่อปีการศึกษา', 60.00, 'สถานศึกษาจัดการเรียนรู้ร่วมกับชุมชนอย่างน้อย 1 รูปแบบต่อปีการศึกษา', 'province', 'active', 'admin'),
-(10, '2569', 'ร้อยละของสถานศึกษาที่สนับสนุนกิจกรรมการเรียนรู้ตลอดชีวิตในชุมชนอย่างน้อย 1 รูปแบบต่อปีการศึกษา', 60.00, 'สถานศึกษาสนับสนุนกิจกรรมการเรียนรู้ตลอดชีวิตในชุมชนอย่างน้อย 1 รูปแบบต่อปีการศึกษา', 'province', 'active', 'admin')
+-- 8c-1) เพิ่มคอลัมน์ sort_order (ลำดับการแสดงผล KPI) สำหรับ DB ที่มีอยู่เดิม
+SET @kpi_sort_order_col_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'kpi_definitions'
+    AND COLUMN_NAME = 'sort_order'
+);
+SET @kpi_sort_order_sql := IF(@kpi_sort_order_col_exists = 0,
+  'ALTER TABLE `kpi_definitions` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0 AFTER `scope_type`',
+  'SELECT 1');
+PREPARE kpi_sort_order_stmt FROM @kpi_sort_order_sql;
+EXECUTE kpi_sort_order_stmt;
+DEALLOCATE PREPARE kpi_sort_order_stmt;
+
+INSERT INTO `kpi_definitions` (`id`, `fiscal_year`, `objective_id`, `kpi_name`, `target_percent`, `success_indicator`, `scope_type`, `sort_order`, `status`, `created_by`) VALUES
+(1, '2569', 7, '1.1.1: ร้อยละของผู้เรียนที่มีระดับการพัฒนาสมรรถนะตามช่วงวัยตามเกณฑ์ที่กำหนด', 60.00, 'ผู้เรียนได้รับการประเมินสมรรถนะตามช่วงวัยและมีผลการพัฒนาตามเกณฑ์ที่กำหนด', 'province', 1, 'active', 'admin'),
+(2, '2569', 7, '1.1.2: อัตราการคงอยู่ในระบบการศึกษาของผู้เรียนในแต่ละปีการศึกษา', 60.00, 'ผู้เรียนคงอยู่ในระบบการศึกษาในแต่ละปีการศึกษาตามเกณฑ์ที่กำหนด', 'province', 2, 'active', 'admin'),
+(3, '2569', 7, '1.1.3: ร้อยละของผู้เรียนที่มีคุณลักษณะที่พึงประสงค์ตามกรอบคุณลักษณะของจังหวัด อยู่ในระดับ "ดี" ขึ้นไป', 70.00, 'ผู้เรียนมีคุณลักษณะที่พึงประสงค์ตามกรอบคุณลักษณะของจังหวัดอยู่ในระดับ "ดี" ขึ้นไป', 'province', 3, 'active', 'admin'),
+(4, '2569', 1, '2.1.1: ร้อยละของผู้เรียนที่ผ่านการประเมินสมรรถนะอาชีพตามสาขาอาชีพหรือทักษะอาชีพที่สอดคล้องกับบริบทพื้นที่จังหวัดนราธิวาส', 60.00, 'ผู้เรียนผ่านการประเมินสมรรถนะอาชีพตามสาขาอาชีพหรือทักษะอาชีพที่สอดคล้องกับบริบทพื้นที่จังหวัดนราธิวาส', 'province', 4, 'active', 'admin'),
+(5, '2569', 1, '2.1.2: ร้อยละของสถานศึกษาที่จัดโครงงานหรือกิจกรรมผู้ประกอบการเพื่อสังคม (Social Entrepreneurship Project/Activity) อย่างน้อย 1 กิจกรรมต่อปีการศึกษา', 100.00, 'สถานศึกษาจัดโครงงานหรือกิจกรรมผู้ประกอบการเพื่อสังคมอย่างน้อย 1 กิจกรรมต่อปีการศึกษา', 'province', 5, 'active', 'admin'),
+(7, '2569', 2, '3.1.1: ร้อยละของผู้เรียนที่ได้รับการประเมินสมรรถนะจากการปฏิบัติจริง ภาระงาน หรือแฟ้มสะสมงาน (Portfolio)', 60.00, 'ผู้เรียนได้รับการประเมินสมรรถนะจากการปฏิบัติจริง ภาระงาน หรือแฟ้มสะสมงาน (Portfolio)', 'province', 6, 'active', 'admin'),
+(8, '2569', 4, '4.1.1: ร้อยละของสถานศึกษาที่รายงานผลลัพธ์เชิงพื้นที่ (Impact) ต่อชุมชน ผู้เรียน หรือพื้นที่โดยรอบ อย่างน้อย 1 เรื่องต่อปีการศึกษา', 100.00, 'สถานศึกษารายงานผลลัพธ์เชิงพื้นที่ (Impact) ต่อชุมชน ผู้เรียน หรือพื้นที่โดยรอบอย่างน้อย 1 เรื่องต่อปีการศึกษา', 'province', 7, 'active', 'admin'),
+(9, '2569', 6, '5.5.1: ร้อยละของสถานศึกษาที่จัดการเรียนรู้ร่วมกับชุมชนอย่างน้อย 1 รูปแบบต่อปีการศึกษา', 100.00, 'สถานศึกษาจัดการเรียนรู้ร่วมกับชุมชนอย่างน้อย 1 รูปแบบต่อปีการศึกษา', 'province', 8, 'active', 'admin'),
+(10, '2569', 6, '5.5.2: ร้อยละของสถานศึกษาที่สนับสนุนกิจกรรมการเรียนรู้ตลอดชีวิตในชุมชนอย่างน้อย 1 รูปแบบต่อปีการศึกษา', 100.00, 'สถานศึกษาสนับสนุนกิจกรรมการเรียนรู้ตลอดชีวิตในชุมชนอย่างน้อย 1 รูปแบบต่อปีการศึกษา', 'province', 9, 'active', 'admin')
 ON DUPLICATE KEY UPDATE
   `kpi_name` = VALUES(`kpi_name`),
+  `objective_id` = VALUES(`objective_id`),
   `target_percent` = VALUES(`target_percent`),
   `success_indicator` = VALUES(`success_indicator`),
   `scope_type` = VALUES(`scope_type`),
+  `sort_order` = VALUES(`sort_order`),
   `status` = VALUES(`status`);
 
 -- -----------------------------------------------------------------------------

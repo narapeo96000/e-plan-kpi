@@ -2,6 +2,27 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-08-10 — แก้ฟอร์มแนบไฟล์เอกสาร + เปลี่ยนจัดการ KPI/ยุทธศาสตร์/เป้าประสงค์/หน่วยงาน เป็น popup
+- `project_form.php`: แก้บั๊กแนบไฟล์เอกสารไม่ทำงาน (สาเหตุ: form ซ้อน form — เบราว์เซอร์เพิกเฉย form ด้านใน) — คืน form หลักเป็นชิ้นเดียว, ย้าย `#docUploadForm` ออกนอก form หลัก, ใช้ HTML5 `form="docUploadForm"` attribute, upload ผ่าน FormData + XHR
+- `kpi_management.php`: เพิ่ม/แก้ไข KPI เป็น popup modal (`kpiModal` + `openKpiModal()`/`saveKpi()`, AJAX endpoint `?ajax=kpi&id=X` / `?ajax=objectives&year=X`, รองรับ `$isAjax` + JSON response) — ลบฟอร์มฝั่งขวา col-xl-5
+- `strategies.php`: เพิ่ม/แก้ไขยุทธศาสตร์เป็น popup modal (`strategyModal`, `?ajax=strategy&id=X`)
+- `objectives.php`: เพิ่ม/แก้ไขเป้าประสงค์เป็น popup modal (`objectiveModal`, `?ajax=objective&id=X` / `?ajax=strategies&year=X`)
+- `schools.php`: เพิ่ม/แก้ไขหน่วยงานเป็น popup modal (`schoolModal`, `?ajax=school&id=X`) + เพิ่ม modal รีเซ็ตรหัสผ่าน (`resetModal`) — ลบฟอร์ม/หน้าตั้งค่ารหัสผ่านฝั่งขวา
+- pattern เดียวกันทั้ง 4 หน้า: POST + `X-Requested-With: XMLHttpRequest` + CSRF → JSON `{success, message/error}` → ปิด modal + reload
+- Deploy ขึ้น server แล้วทั้งหมด: `project_form.php`, `kpi_management.php`, `strategies.php`, `objectives.php`, `schools.php`
+
+## 2026-08-09 — เพิ่มหน้าเอกสารดาวน์โหลด + เริ่มโครงสร้าง เป้าประสงค์ (objectives)
+- เพิ่มหน้า `download_docs.php`: แสดงรายการเอกสารให้ทุกคนดาวน์โหลด (PDF/Word/Excel/PowerPoint/zip/rar) — admin อัปโหลด/ซ่อน/ลบเอกสารได้ (CSRF + logfile), ไฟล์เก็บใน `uploads/docs/` จำกัด 10 MB
+- เพิ่มตาราง `download_docs` (title, description, file, status, sort_order) ใน `office_budget_edu_db.sql` + `migration_upgrade.sql` และรัน migration บน server แล้ว
+- `menu.php`: เพิ่มเมนู "📁 เอกสารดาวน์โหลด" (desktop sidebar + mobile nav) ต่อจากเมนู ยุทธศาสตร์
+- เพิ่มตาราง `objectives` (เป้าประสงค์: 1 ยุทธศาสตร์ มีได้หลายเป้าประสงค์) + คอลัมน์ `kpi_definitions.objective_id` (ตัวชี้วัดผูกกับเป้าประสงค์) — schema + migration + seed objectives เริ่มต้นปี 2569 (6 ข้อ) + map KPI เดิม 10 ตัวเข้ากับ objective แล้ว
+- `menu.php`: ซ่อนเมนู "ติดตาม OKR" และ "บันทึกการเบิกจ่าย" (ยังไม่ใช้) — คงเมนูบริหารงบประมาณอื่นไว้
+
+## 2026-08-09 — นำเข้าข้อมูลแผนปฏิบัติการปี 2569 (43 โครงการ) + ลบหน่วยงานได้
+- ลบข้อมูลโครงการเดิมทั้งหมด (64 โครงการ) ออกจาก server และนำเข้าเฉพาะ 43 โครงการใหม่ (PRJ2569-001..043) จาก `seed_eplan_2569.sql` — map `agency_id`/`strategy_id` ไป id จริงบน server (seed ใช้ id 8-17 แต่ server มีหน่วยงานอยู่ที่ id อื่น เช่น narasci=16, naracity=14, kolokcity=15, pnu=20, ncc=24, technicbangnara=22, mol=23; ยุทธศาสตร์ 2569 อยู่ที่ id 1,3,7,8,9)
+- ลบข้อมูลลูกของโครงการเดิม: `project_kpis` (13), `project_strategic_issues` (20), `project_documents`, `budget_transactions` (2) — ไม่แตะข้อมูล OKR
+- `schools.php`: เพิ่มปุ่ม "ลบ" หน่วยงานทางการศึกษา (POST + CSRF + confirm) — FK `fk_projects_agencies`/`fk_users_agencies` เป็น `ON DELETE SET NULL` ทำให้โครงการ/ผู้ใช้ที่ผูกยังคงอยู่ เพียงแต่ไม่มีหน่วยงานกำกับ + logfile
+
 ## 2026-08-09 20:15 — เรียงลำดับยุทธศาสตร์และกำหนดลำดับหน่วยงาน
 - `index.php`: เรียง "โครงการแยกตามยุทธศาสตร์" ตาม `issue_no` (1,2,3,...n) บน Dashboard
 - เพิ่มคอลัมน์ `sort_order` ในตาราง `agencies` (เรียงหน่วยงานบน Dashboard/รายงาน/ฟอร์ม/dropdown ทุกจุด: `index.php`, `schools.php`, `db.php` (getSchools), `projects.php`, `project_form.php`, `users.php`, `export_excel.php`, `export_pdf.php`)

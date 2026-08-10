@@ -13,10 +13,11 @@ require_once __DIR__ . '/db.php';
  */
 
 $fiscalYear = !empty($fiscal_year) ? $fiscal_year : date('Y') + 543;
+$csrfToken = csrfToken();
 $searchQuery = isset($_GET['q']) ? trim($_GET['q']) : '';
 $filterYear = isset($_GET['year']) ? trim($_GET['year']) : $fiscalYear;
 $filterSchool = isset($_GET['school']) ? trim($_GET['school']) : (isset($_GET['department']) ? trim($_GET['department']) : '');
-$filterStatus = isset($_GET['status']) ? trim($_GET['status']) : '';
+$filterStrategy = isset($_GET['strategy']) ? trim($_GET['strategy']) : '';
 $filterResult = isset($_GET['result']) ? trim($_GET['result']) : '';
 $filterSource = isset($_GET['source']) ? trim($_GET['source']) : '';
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -43,8 +44,9 @@ if ($searchQuery !== '') {
 if ($filterSchool !== '') {
     $conditions[] = "p.agency_id = " . (int)$filterSchool;
 }
-if ($filterStatus !== '') {
-    $conditions[] = "p.status = '" . $conn->real_escape_string($filterStatus) . "'";
+if ($filterStrategy !== '') {
+    $sid = (int)$filterStrategy;
+    $conditions[] = "(p.strategy_id = $sid OR p.id IN (SELECT psi.project_id FROM project_strategic_issues psi WHERE psi.source = 'project' AND psi.strategic_issue_id = $sid))";
 }
 if ($filterResult !== '') {
     if ($filterResult === 'ยังไม่ระบุ') {
@@ -104,16 +106,27 @@ if ($result) {
     }
 }
 
+$sumSql = "
+    SELECT
+        COALESCE(SUM(CAST(p.budget_allocated AS DECIMAL(15,2))), 0) AS total_allocated,
+        COALESCE(SUM(CAST(p.budget_used AS DECIMAL(15,2))), 0) AS total_used
+    FROM projects p
+    LEFT JOIN agencies a ON a.id = p.agency_id
+    LEFT JOIN strategic_issues si ON si.id = p.strategy_id
+    WHERE " . $whereClause . "
+";
+$sumResult = $conn->query($sumSql);
 $totalAllocated = 0;
 $totalUsed = 0;
-foreach ($projects as $project) {
-    $totalAllocated += (float)$project['budget_allocated'];
-    $totalUsed += (float)$project['budget_used'];
+if ($sumResult) {
+    $sumRow = $sumResult->fetch_assoc();
+    $totalAllocated = (float)$sumRow['total_allocated'];
+    $totalUsed = (float)$sumRow['total_used'];
 }
 $usageRate = $totalAllocated > 0 ? min(100, round(($totalUsed / $totalAllocated) * 100, 1)) : 0;
 
 $schoolOptions = array();
-$statusOptions = array();
+$strategyOptions = array();
 $sourceOptions = array();
 $yearOptions = array();
 $yearRes = $conn->query("SELECT DISTINCT fiscal_year FROM projects ORDER BY fiscal_year DESC");
@@ -124,9 +137,9 @@ $schoolRes = $conn->query("SELECT id, agency_name AS school_name FROM agencies W
 while ($row = $schoolRes->fetch_assoc()) {
     $schoolOptions[] = $row;
 }
-$statusRes = $conn->query("SELECT DISTINCT status FROM projects WHERE status != '' ORDER BY status ASC");
-while ($row = $statusRes->fetch_assoc()) {
-    $statusOptions[] = $row['status'];
+$strategyRes = $conn->query("SELECT id, issue_no, issue_name FROM strategic_issues WHERE fiscal_year = '" . $conn->real_escape_string($filterYear) . "' ORDER BY issue_no ASC");
+while ($row = $strategyRes->fetch_assoc()) {
+    $strategyOptions[] = $row;
 }
 $resultOptions = array('บรรลุ', 'ระหว่างดำเนินการ', 'ไม่บรรลุ', 'ยังไม่ระบุ');
 $sourceRes = $conn->query("SELECT DISTINCT source_name FROM budget_income WHERE fiscal_year = '" . $conn->real_escape_string($filterYear) . "' ORDER BY source_name ASC");
@@ -134,7 +147,7 @@ while ($row = $sourceRes->fetch_assoc()) {
     $sourceOptions[] = $row['source_name'];
 }
 
-function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterResult, $filterSource)
+function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterSchool, $filterStrategy, $filterResult, $filterSource)
 {
     $params = array();
     if ($searchQuery !== '') {
@@ -146,8 +159,8 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
     if ($filterSchool !== '') {
         $params[] = 'school=' . urlencode($filterSchool);
     }
-    if ($filterStatus !== '') {
-        $params[] = 'status=' . urlencode($filterStatus);
+    if ($filterStrategy !== '') {
+        $params[] = 'strategy=' . urlencode($filterStrategy);
     }
     if ($filterResult !== '') {
         $params[] = 'result=' . urlencode($filterResult);
@@ -223,11 +236,11 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
                                 </select>
                             </div>
                             <div class="col-12 col-md-3">
-                                <label class="form-label">สถานะ</label>
-                                <select name="status" class="form-select">
-                                    <option value="">-- ทุกสถานะ --</option>
-                                    <?php foreach ($statusOptions as $statusOpt): ?>
-                                        <option value="<?= htmlspecialchars($statusOpt) ?>" <?= $filterStatus === $statusOpt ? 'selected' : '' ?>><?= htmlspecialchars($statusOpt) ?></option>
+                                <label class="form-label">ยุทธศาสตร์</label>
+                                <select name="strategy" class="form-select">
+                                    <option value="">-- ทุกยุทธศาสตร์ --</option>
+                                    <?php foreach ($strategyOptions as $stratOpt): ?>
+                                        <option value="<?= (int)$stratOpt['id'] ?>" <?= (string)$filterStrategy === (string)$stratOpt['id'] ? 'selected' : '' ?>>ยุทธศาสตร์ที่ <?= intval($stratOpt['issue_no']) ?>: <?= htmlspecialchars($stratOpt['issue_name']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -314,6 +327,7 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
                                     <?php
                                     $rowNumber = (($page - 1) * $perPage) + $index + 1;
                                     $canEditProject = canEditProject($project);
+                                    $canDeleteProject = canDeleteProject($project);
                                     $status = trim((string)($project['status'] ?: '-'));
                                     $statusClass = 'status-pending';
                                     $statusIcon = '⏳';
@@ -398,6 +412,9 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
                                             <?php if ($canEditProject): ?>
                                                 <a class="btn btn-sm btn-outline-primary" href="project_form.php?id=<?= (int)$project['id'] ?>">✏️</a>
                                             <?php endif; ?>
+                                            <?php if ($canDeleteProject): ?>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" title="ลบโครงการ" data-bs-toggle="modal" data-bs-target="#deleteProjectModal" data-id="<?= (int)$project['id'] ?>" data-title="<?= htmlspecialchars($project['title']) ?>">🗑️</button>
+                                            <?php endif; ?>
                                             <?php if (!isLoggedIn()): ?>
                                                 <span class="text-muted small">-</span>
                                             <?php endif; ?>
@@ -415,15 +432,15 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
                             <nav aria-label="Pagination">
                                 <ul class="pagination pagination-sm mb-0">
                                     <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
-                                        <a class="page-link" href="<?= buildProjectPaginationUrl($page - 1, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterResult, $filterSource) ?>">ก่อนหน้า</a>
+                                        <a class="page-link" href="<?= buildProjectPaginationUrl($page - 1, $searchQuery, $filterYear, $filterSchool, $filterStrategy, $filterResult, $filterSource) ?>">ก่อนหน้า</a>
                                     </li>
                                     <?php for ($i = 1; $i <= $totalPages; $i++): ?>
                                         <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-                                            <a class="page-link" href="<?= buildProjectPaginationUrl($i, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterResult, $filterSource) ?>"><?= $i ?></a>
+                                            <a class="page-link" href="<?= buildProjectPaginationUrl($i, $searchQuery, $filterYear, $filterSchool, $filterStrategy, $filterResult, $filterSource) ?>"><?= $i ?></a>
                                         </li>
                                     <?php endfor; ?>
                                     <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
-                                        <a class="page-link" href="<?= buildProjectPaginationUrl($page + 1, $searchQuery, $filterYear, $filterSchool, $filterStatus, $filterResult, $filterSource) ?>">ถัดไป</a>
+                                        <a class="page-link" href="<?= buildProjectPaginationUrl($page + 1, $searchQuery, $filterYear, $filterSchool, $filterStrategy, $filterResult, $filterSource) ?>">ถัดไป</a>
                                     </li>
                                 </ul>
                             </nav>
@@ -433,6 +450,29 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
             </div>
         </div>
     </main>
+</div>
+
+<div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="project_delete.php">
+                <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+                <input type="hidden" name="id" id="deleteProjectId" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">ยืนยันการลบโครงการ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    ต้องการลบโครงการ <span class="fw-bold text-danger" id="deleteProjectTitle"></span> ใช่หรือไม่?<br>
+                    <span class="text-muted small">การลบจะนำข้อมูลและไฟล์แนบทั้งหมดของโครงการออกจากระบบ ถาวร</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">ยืนยันการลบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -450,12 +490,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    const filterElements = form.querySelectorAll('select[name="year"], select[name="school"], select[name="status"], select[name="result"], select[name="source"]');
+    const filterElements = form.querySelectorAll('select[name="year"], select[name="school"], select[name="strategy"], select[name="result"], select[name="source"]');
     filterElements.forEach(function(el) {
         el.addEventListener('change', function() {
             form.submit();
         });
     });
+
+    const deleteModal = document.getElementById('deleteProjectModal');
+    if (deleteModal) {
+        document.querySelectorAll('[data-bs-target="#deleteProjectModal"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.getElementById('deleteProjectId').value = btn.getAttribute('data-id');
+                document.getElementById('deleteProjectTitle').textContent = btn.getAttribute('data-title');
+            });
+        });
+    }
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

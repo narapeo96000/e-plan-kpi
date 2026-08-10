@@ -291,12 +291,7 @@ if ($projectsResult) {
                                     <td><span class="small"><?= htmlspecialchars($tx['created_by'] ?: '-') ?></span></td>
                                     <td>
                                         <button class="btn btn-sm btn-outline-primary" onclick="openEditModal(<?= (int)$tx['id'] ?>)">✏️</button>
-                                        <form method="post" style="display:inline" onsubmit="return confirm('ยืนยันการลบรายการนี้?')">
-                                            <?= csrfField() ?>
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="tx_id" value="<?= (int)$tx['id'] ?>">
-                                            <button class="btn btn-sm btn-outline-danger">🗑️</button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteTxModal" data-id="<?= (int)$tx['id'] ?>">🗑️</button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -361,6 +356,30 @@ if ($projectsResult) {
     </div>
 </div>
 
+<div class="modal fade" id="deleteTxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="tx_id" id="deleteTxId" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">ยืนยันการลบรายการ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    ต้องการลบรายการเบิกจ่ายนี้ใช่หรือไม่?<br>
+                    <span class="text-muted small">การลบจะไม่สามารถกู้คืนได้</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">ยืนยันการลบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 var transactions = <?= json_encode($transactions, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
@@ -417,6 +436,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('txAmount').addEventListener('input', function() {
         this.value = this.value.replace(/[^0-9.]/g, '');
     });
+    var modal = document.getElementById('deleteTxModal');
+    if (modal) {
+        document.querySelectorAll('[data-bs-target="#deleteTxModal"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.getElementById('deleteTxId').value = btn.getAttribute('data-id');
+            });
+        });
+    }
 });
 
 function numberFormat(n) {

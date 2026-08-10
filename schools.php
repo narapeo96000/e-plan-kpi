@@ -92,8 +92,19 @@ function ensureAgencyTable($conn, $tableName) {
 $tableName = resolveAgencyTable($conn);
 ensureAgencyTable($conn, $tableName);
 
+// AJAX endpoint สำหรับโหลดข้อมูลหน่วยงานรายตัว (สำหรับ popup แก้ไข)
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'school' && !empty($_GET['id'])) {
+    header('Content-Type: application/json; charset=UTF-8');
+    $srow = null;
+    $sr = $conn->query("SELECT id, agency_code, agency_name, department, sort_order FROM $tableName WHERE id = " . intval($_GET['id']) . " LIMIT 1");
+    if ($sr) $srow = $sr->fetch_assoc();
+    echo json_encode($srow ? $srow : array(), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $schoolId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 $error = '';
 $success = '';
 
@@ -133,8 +144,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'department' => $department,
                         'sort_order' => $sortOrder,
                     ));
-                    header('Location: schools.php');
-                    exit;
                 } else {
                     if ($password === '') {
                         $error = 'กรุณากรอกรหัสผ่านสำหรับหน่วยงานใหม่';
@@ -149,26 +158,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'department' => $department,
                             'sort_order' => $sortOrder,
                         ));
-                        header('Location: schools.php');
-                        exit;
                     }
                 }
             }
         }
-    }
-}
-
-if ($action === 'reset' && $schoolId > 0 && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
-    $newPassword = trim(isset($_POST['new_password']) ? $_POST['new_password'] : '');
-    if ($newPassword === '') {
-        $error = 'กรุณากรอกรหัสผ่านใหม่';
-    } else {
-        $hash = password_hash($newPassword, PASSWORD_DEFAULT);
-        $conn->query("UPDATE $tableName SET password = '" . $conn->real_escape_string($hash) . "' WHERE id = $schoolId");
-        $success = 'รีเซ็ตรหัสผ่านเรียบร้อยแล้ว';
-        logfile($conn, 'รีเซ็ตรหัสผ่าน', 'schools', $schoolId);
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=UTF-8');
+            if (!empty($error)) {
+                echo json_encode(array('success' => false, 'error' => $error), JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode(array('success' => true, 'message' => $success), JSON_UNESCAPED_UNICODE);
+            }
+            exit;
+        }
+        if (!empty($error)) {
+            // non-AJAX: แสดง error ด้านล่าง
+        } else {
+            header('Location: schools.php');
+            exit;
+        }
+    } elseif (isset($_POST['reset_password'])) {
+        $delId = isset($_POST['agency_record_id']) ? intval($_POST['agency_record_id']) : 0;
+        $newPassword = trim(isset($_POST['new_password']) ? $_POST['new_password'] : '');
+        if ($delId <= 0 || $newPassword === '') {
+            $error = 'กรุณากรอกรหัสผ่านใหม่';
+        } else {
+            $hash = password_hash($newPassword, PASSWORD_DEFAULT);
+            $conn->query("UPDATE $tableName SET password = '" . $conn->real_escape_string($hash) . "' WHERE id = $delId");
+            $success = 'รีเซ็ตรหัสผ่านเรียบร้อยแล้ว';
+            logfile($conn, 'รีเซ็ตรหัสผ่าน', 'schools', $delId);
+        }
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=UTF-8');
+            if (!empty($error)) {
+                echo json_encode(array('success' => false, 'error' => $error), JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode(array('success' => true, 'message' => $success), JSON_UNESCAPED_UNICODE);
+            }
+            exit;
+        }
         header('Location: schools.php');
         exit;
+    } elseif (isset($_POST['delete_school'])) {
+        $delId = isset($_POST['agency_record_id']) ? intval($_POST['agency_record_id']) : 0;
+        if ($delId > 0) {
+            $delRes = $conn->query("SELECT id, agency_code, agency_name FROM $tableName WHERE id = $delId LIMIT 1");
+            if ($delRes && $delRes->num_rows > 0) {
+                $delRow = $delRes->fetch_assoc();
+                // ลบหน่วยงาน (FK ตั้งค่า SET NULL ไว้ -> โครงการ/ผู้ใช้ที่อ้างอิงจะไม่ถูกลบ เพียงแต่ไม่มีหน่วยงาน)
+                $conn->query("DELETE FROM $tableName WHERE id = $delId");
+                logfile($conn, 'ลบ', 'schools', $delId, array(
+                    'agency_code' => $delRow['agency_code'],
+                    'agency_name' => $delRow['agency_name'],
+                ));
+                $success = 'ลบหน่วยงานเรียบร้อยแล้ว (โครงการที่อ้างอิงคงอยู่ แต่ไม่มีหน่วยงานกำกับ)';
+                header('Location: schools.php');
+                exit;
+            } else {
+                $error = 'ไม่พบหน่วยงานที่ต้องการลบ';
+            }
+        }
     }
 }
 
@@ -177,14 +226,6 @@ $result = $conn->query("SELECT * FROM $tableName ORDER BY sort_order ASC, agency
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $schools[] = $row;
-    }
-}
-
-$editingSchool = null;
-if ($action === 'edit' && $schoolId > 0) {
-    $schoolRes = $conn->query("SELECT * FROM $tableName WHERE id = $schoolId LIMIT 1");
-    if ($schoolRes) {
-        $editingSchool = $schoolRes->fetch_assoc();
     }
 }
 ?>
@@ -222,9 +263,13 @@ if ($action === 'edit' && $schoolId > 0) {
         <?php endif; ?>
 
         <div class="row g-4">
-            <div class="col-12 col-xl-7">
+            <div class="col-12">
                 <div class="card border-0 shadow-sm">
                     <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <h2 class="h5 fw-bold mb-0">รายการหน่วยงาน</h2>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="openSchoolModal()">➕ เพิ่มหน่วยงาน</button>
+                        </div>
                         <div class="table-responsive">
                             <table class="table align-middle mb-0">
                                 <thead>
@@ -247,7 +292,12 @@ if ($action === 'edit' && $schoolId > 0) {
                                             <td><?= htmlspecialchars($school['department'] ?: '-') ?></td>
                                             <td>
                                                 <div class="d-flex flex-wrap gap-2">
-                                                    <a class="btn btn-sm btn-outline-primary" href="schools.php?action=edit&id=<?= (int)$school['id'] ?>">แก้ไข</a>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openSchoolModal(<?= (int)$school['id'] ?>)">แก้ไข</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="openResetModal(<?= (int)$school['id'] ?>)">รีเซ็ตพาส</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#deleteAgencyModal"
+                                                        data-id="<?= (int)$school['id'] ?>"
+                                                        data-name="<?= htmlspecialchars($school['agency_name']) ?>">ลบ</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -258,60 +308,231 @@ if ($action === 'edit' && $schoolId > 0) {
                     </div>
                 </div>
             </div>
-
-            <div class="col-12 col-xl-5">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <h2 class="h5 fw-bold mb-3"><?= $editingSchool ? 'แก้ไขหน่วยงาน' : 'เพิ่มหน่วยงานใหม่' ?></h2>
-                        <form method="post">
-                            <input type="hidden" name="agency_record_id" value="<?= $editingSchool ? (int)$editingSchool['id'] : 0 ?>">
-                            <?= csrfField() ?>
-                            <div class="mb-3">
-                                <label class="form-label">รหัสหน่วยงาน</label>
-                                <input class="form-control" type="text" name="agency_code" value="<?= htmlspecialchars($editingSchool ? $editingSchool['agency_code'] : '') ?>" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">ชื่อหน่วยงาน</label>
-                                <input class="form-control" type="text" name="agency_name" value="<?= htmlspecialchars($editingSchool ? $editingSchool['agency_name'] : '') ?>" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">สังกัด</label>
-                                <input class="form-control" type="text" name="department" value="<?= htmlspecialchars($editingSchool ? ($editingSchool['department'] ?: '') : '') ?>" placeholder="เช่น สพป.นธ.1, สพม.นราธิวาส">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">ลำดับแสดงผล</label>
-                                <input class="form-control" type="number" min="0" step="1" name="sort_order" value="<?= htmlspecialchars($editingSchool ? (int)$editingSchool['sort_order'] : 0) ?>">
-                                <div class="form-text">ใช้เรียงลำดับหน่วยงานบนหน้า Dashboard และรายงาน (น้อย = แสดงก่อน)</div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">รหัสผ่าน<?= $editingSchool ? ' (เว้นว่างหากไม่ต้องการเปลี่ยน)' : '' ?></label>
-                                <input class="form-control" type="password" name="password" <?= $editingSchool ? '' : 'required' ?>>
-                            </div>
-                            <button class="btn btn-primary w-100" type="submit" name="save_school">บันทึกข้อมูล</button>
-                        </form>
-                    </div>
-                </div>
-
-                <?php if ($action === 'reset' && $schoolId > 0): ?>
-                    <div class="card border-0 shadow-sm mt-4">
-                        <div class="card-body">
-                            <h2 class="h5 fw-bold mb-3">รีเซ็ตรหัสผ่าน</h2>
-                            <form method="post" action="schools.php?action=reset&id=<?= $schoolId ?>">
-                                <?= csrfField() ?>
-                                <div class="mb-3">
-                                    <label class="form-label">รหัสผ่านใหม่</label>
-                                    <input class="form-control" type="password" name="new_password" required>
-                                </div>
-                                <button class="btn btn-warning w-100" type="submit" name="reset_password">รีเซ็ต</button>
-                            </form>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
         </div>
     </div>
 </main>
 </div>
+
+<!-- ===== Modal: เพิ่ม/แก้ไขหน่วยงาน (popup) ===== -->
+<div class="modal fade" id="schoolModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="schoolForm" onsubmit="return saveSchool(event)">
+                <input type="hidden" name="agency_record_id" id="schoolId" value="0">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrfToken()) ?>">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="schoolModalTitle">➕ เพิ่มหน่วยงาน</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger py-2 d-none" id="schoolModalError"></div>
+                    <div class="mb-3">
+                        <label class="form-label">รหัสหน่วยงาน</label>
+                        <input class="form-control" type="text" name="agency_code" id="schoolCode" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ชื่อหน่วยงาน</label>
+                        <input class="form-control" type="text" name="agency_name" id="schoolName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">สังกัด</label>
+                        <input class="form-control" type="text" name="department" id="schoolDept" placeholder="เช่น สพป.นธ.1, สพม.นราธิวาส">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ลำดับแสดงผล</label>
+                        <input class="form-control" type="number" min="0" step="1" name="sort_order" id="schoolSort" value="0">
+                        <div class="form-text">ใช้เรียงลำดับหน่วยงานบนหน้า Dashboard และรายงาน (น้อย = แสดงก่อน)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" id="schoolPassLabel">รหัสผ่าน</label>
+                        <input class="form-control" type="password" name="password" id="schoolPassword" autocomplete="new-password">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary" id="schoolSaveBtn">💾 บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Modal: รีเซ็ตรหัสผ่าน (popup) ===== -->
+<div class="modal fade" id="resetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="resetForm" onsubmit="return saveResetPassword(event)">
+                <input type="hidden" name="agency_record_id" id="resetId" value="0">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrfToken()) ?>">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">🔑 รีเซ็ตรหัสผ่าน</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger py-2 d-none" id="resetModalError"></div>
+                    <div class="mb-3">
+                        <label class="form-label">รหัสผ่านใหม่</label>
+                        <input class="form-control" type="password" name="new_password" id="resetPassword" autocomplete="new-password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-warning" id="resetSaveBtn">รีเซ็ต</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteAgencyModal" tabindex="-1" aria-labelledby="deleteAgencyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="deleteAgencyModalLabel">ยืนยันการลบหน่วยงาน</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+            </div>
+            <form method="post" action="schools.php">
+                <input type="hidden" name="agency_record_id" id="deleteAgencyId" value="">
+                <?= csrfField() ?>
+                <div class="modal-body">
+                    <p class="mb-2">ต้องการลบหน่วยงานนี้ใช่หรือไม่?</p>
+                    <div class="fw-bold text-danger fs-5 mb-3" id="deleteAgencyName"></div>
+                    <div class="alert alert-warning mb-0" role="alert">
+                        ⚠️ หมายเหตุ: โครงการที่ผูกอยู่กับหน่วยงานนี้จะ<b>ยังคงอยู่</b> แต่จะไม่มีหน่วยงานกำกับ (ไม่ถูกลบ)
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" name="delete_school" class="btn btn-danger">ยืนยันการลบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+    var modal = document.getElementById('deleteAgencyModal');
+    document.querySelectorAll('[data-bs-target="#deleteAgencyModal"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('deleteAgencyId').value = btn.getAttribute('data-id');
+            document.getElementById('deleteAgencyName').textContent = btn.getAttribute('data-name');
+        });
+    });
+})();
+
+// ===== Modal เพิ่ม/แก้ไขหน่วยงาน (popup) =====
+var schoolModalEl = document.getElementById('schoolModal');
+
+function openSchoolModal(id) {
+    const form = document.getElementById('schoolForm');
+    form.reset();
+    document.getElementById('schoolId').value = id || 0;
+    document.getElementById('schoolModalError').classList.add('d-none');
+    document.getElementById('schoolSaveBtn').disabled = false;
+    if (id) {
+        document.getElementById('schoolModalTitle').textContent = '✏️ แก้ไขหน่วยงาน';
+        document.getElementById('schoolPassLabel').textContent = 'รหัสผ่าน (เว้นว่างหากไม่ต้องการเปลี่ยน)';
+        fetch('schools.php?ajax=school&id=' + encodeURIComponent(id))
+            .then(function (r) { return r.json(); })
+            .then(function (s) {
+                if (!s || !s.id) { document.getElementById('schoolModalError').textContent = 'ไม่พบข้อมูลหน่วยงาน'; document.getElementById('schoolModalError').classList.remove('d-none'); return; }
+                document.getElementById('schoolCode').value = s.agency_code || '';
+                document.getElementById('schoolName').value = s.agency_name || '';
+                document.getElementById('schoolDept').value = s.department || '';
+                document.getElementById('schoolSort').value = s.sort_order || 0;
+            })
+            .catch(function () {
+                document.getElementById('schoolModalError').textContent = 'โหลดข้อมูลไม่สำเร็จ';
+                document.getElementById('schoolModalError').classList.remove('d-none');
+            });
+    } else {
+        document.getElementById('schoolModalTitle').textContent = '➕ เพิ่มหน่วยงาน';
+        document.getElementById('schoolPassLabel').textContent = 'รหัสผ่าน';
+        document.getElementById('schoolSort').value = '0';
+    }
+    var modal = bootstrap.Modal.getOrCreateInstance(schoolModalEl);
+    modal.show();
+}
+
+function saveSchool(event) {
+    event.preventDefault();
+    const form = document.getElementById('schoolForm');
+    const errBox = document.getElementById('schoolModalError');
+    const btn = document.getElementById('schoolSaveBtn');
+    errBox.classList.add('d-none');
+    btn.disabled = true;
+    const fd = new FormData(form);
+    fd.append('save_school', '1');
+    fetch('schools.php', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(schoolModalEl).hide();
+                location.reload();
+            } else {
+                errBox.textContent = (res && res.error) ? res.error : 'บันทึกไม่สำเร็จ';
+                errBox.classList.remove('d-none');
+                btn.disabled = false;
+            }
+        })
+        .catch(function () {
+            errBox.textContent = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
+            errBox.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    return false;
+}
+
+// ===== Modal รีเซ็ตรหัสผ่าน (popup) =====
+var resetModalEl = document.getElementById('resetModal');
+
+function openResetModal(id) {
+    document.getElementById('resetId').value = id || 0;
+    document.getElementById('resetPassword').value = '';
+    document.getElementById('resetModalError').classList.add('d-none');
+    document.getElementById('resetSaveBtn').disabled = false;
+    var modal = bootstrap.Modal.getOrCreateInstance(resetModalEl);
+    modal.show();
+}
+
+function saveResetPassword(event) {
+    event.preventDefault();
+    const form = document.getElementById('resetForm');
+    const errBox = document.getElementById('resetModalError');
+    const btn = document.getElementById('resetSaveBtn');
+    errBox.classList.add('d-none');
+    btn.disabled = true;
+    const fd = new FormData(form);
+    fd.append('reset_password', '1');
+    fetch('schools.php', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(resetModalEl).hide();
+                location.reload();
+            } else {
+                errBox.textContent = (res && res.error) ? res.error : 'รีเซ็ตรหัสผ่านไม่สำเร็จ';
+                errBox.classList.remove('d-none');
+                btn.disabled = false;
+            }
+        })
+        .catch(function () {
+            errBox.textContent = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
+            errBox.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    return false;
+}
+</script>
 </body>
 </html>

@@ -89,7 +89,8 @@ function navParentShow($pages) {
         </a>
       </li>
 
-      <!-- OKR -->
+      <!-- OKR (ซ่อนชั่วคราว — ยังไม่ใช้) -->
+      <?php if (false): ?>
       <li class="sidebar-item has-sub">
         <a class="sidebar-link <?= navParentActive(array('okr_agency_targets', 'okr_project_form')) ?>" href="javascript:void(0)" onclick="toggleSidebarSub(this)">
           <span class="sidebar-icon">🎯</span>
@@ -109,6 +110,7 @@ function navParentShow($pages) {
           </ul>
         </div>
       </li>
+      <?php endif; ?>
 
       <!-- Projects -->
       <li class="sidebar-item has-sub">
@@ -144,7 +146,9 @@ function navParentShow($pages) {
         </a>
         <div class="sidebar-sub <?= navParentShow(array('budget_transactions', 'budget_income', 'budget_sources')) ?>" id="budgetSub">
           <ul>
+            <?php /* บันทึกการเบิกจ่าย (ซ่อนชั่วคราว) */ if (false): ?>
             <li><a class="<?= navActive('budget_transactions') ?>" href="budget_transactions.php">💳 บันทึกการเบิกจ่าย</a></li>
+            <?php endif; ?>
             <li><a class="<?= navActive('budget_income') ?>" href="budget_income.php">📊 สรุปตามแหล่งเงิน</a></li>
             <li><a class="<?= navActive('budget_sources') ?>" href="budget_sources.php">🏦 แหล่งงบประมาณ</a></li>
           </ul>
@@ -159,21 +163,33 @@ function navParentShow($pages) {
         </a>
       </li>
 
-      <!-- Strategies -->
+      <!-- Download docs -->
       <li class="sidebar-item">
-        <a class="sidebar-link <?= navActive('strategies') ?>" href="strategies.php">
-          <span class="sidebar-icon">🎯</span>
-          <span class="sidebar-text">ยุทธศาสตร์</span>
+        <a class="sidebar-link <?= navActive('download_docs') ?>" href="download_docs.php">
+          <span class="sidebar-icon">📁</span>
+          <span class="sidebar-text">เอกสารดาวน์โหลด</span>
         </a>
       </li>
 
-      <!-- KPI (plan + admin) -->
+      <!-- Strategy / Objectives / KPI (plan + admin) -->
       <?php if (isAdminOrPlan()): ?>
-      <li class="sidebar-item">
-        <a class="sidebar-link <?= navActive('kpi_management') ?>" href="kpi_management.php">
-          <span class="sidebar-icon">📐</span>
-          <span class="sidebar-text">กำหนดตัวชี้วัด KPI</span>
+      <li class="sidebar-item has-sub">
+        <a class="sidebar-link <?= navParentActive(array('strategies', 'objectives', 'kpi_management')) ?>" href="javascript:void(0)" onclick="toggleSidebarSub(this)">
+          <span class="sidebar-icon">🎯</span>
+          <span class="sidebar-text">กำหนดยุทธศาสตร์ เป้าประสงค์ ตัวชี้วัด</span>
+          <span class="sidebar-arrow ms-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+            </svg>
+          </span>
         </a>
+        <div class="sidebar-sub <?= navParentShow(array('strategies', 'objectives', 'kpi_management')) ?>" id="strategyPlanSub">
+          <ul>
+            <li><a class="<?= navActive('strategies') ?>" href="strategies.php">🎯 ยุทธศาสตร์</a></li>
+            <li><a class="<?= navActive('objectives') ?>" href="objectives.php">🎯 เป้าประสงค์</a></li>
+            <li><a class="<?= navActive('kpi_management') ?>" href="kpi_management.php">📐 ตัวชี้วัด KPI</a></li>
+          </ul>
+        </div>
       </li>
       <?php endif; ?>
 
@@ -283,7 +299,8 @@ function navParentShow($pages) {
         </a>
       </li>
 
-      <!-- OKR -->
+      <!-- OKR (ซ่อนชั่วคราว — ยังไม่ใช้) -->
+      <?php if (false): ?>
       <li class="mobile-nav-item has-sub">
         <a class="mobile-nav-link <?= navParentActive(array('okr_agency_targets', 'okr_project_form')) ?>" href="#mOkrSub" data-bs-toggle="collapse">
           <span>🎯</span> ติดตาม OKR
@@ -298,6 +315,7 @@ function navParentShow($pages) {
           </ul>
         </div>
       </li>
+      <?php endif; ?>
 
       <!-- Projects -->
       <li class="mobile-nav-item has-sub">
@@ -323,7 +341,9 @@ function navParentShow($pages) {
         </a>
         <div class="collapse <?= navParentShow(array('budget_transactions', 'budget_income', 'budget_sources')) ?>" id="mBudgetSub">
           <ul>
+            <?php /* บันทึกการเบิกจ่าย (ซ่อนชั่วคราว) */ if (false): ?>
             <li><a class="<?= navActive('budget_transactions') ?>" href="budget_transactions.php">💳 บันทึกการเบิกจ่าย</a></li>
+            <?php endif; ?>
             <li><a class="<?= navActive('budget_income') ?>" href="budget_income.php">📊 สรุปตามแหล่งเงิน</a></li>
             <li><a class="<?= navActive('budget_sources') ?>" href="budget_sources.php">🏦 แหล่งงบประมาณ</a></li>
           </ul>
@@ -337,19 +357,27 @@ function navParentShow($pages) {
         </a>
       </li>
 
-      <!-- Strategies -->
+      <!-- Download docs -->
       <li class="mobile-nav-item">
-        <a class="mobile-nav-link <?= navActive('strategies') ?>" href="strategies.php">
-          <span>🎯</span> ยุทธศาสตร์
+        <a class="mobile-nav-link <?= navActive('download_docs') ?>" href="download_docs.php">
+          <span>📁</span> เอกสารดาวน์โหลด
         </a>
       </li>
 
-      <!-- KPI (plan + admin) -->
+      <!-- Strategy / Objectives / KPI (plan + admin) -->
       <?php if (isAdminOrPlan()): ?>
-      <li class="mobile-nav-item">
-        <a class="mobile-nav-link <?= navActive('kpi_management') ?>" href="kpi_management.php">
-          <span>📐</span> กำหนดตัวชี้วัด KPI
+      <li class="mobile-nav-item has-sub">
+        <a class="mobile-nav-link <?= navParentActive(array('strategies', 'objectives', 'kpi_management')) ?>" href="#mStrategyPlanSub" data-bs-toggle="collapse">
+          <span>🎯</span> กำหนดยุทธศาสตร์ เป้าประสงค์ ตัวชี้วัด
+          <span class="arrow ms-auto">▼</span>
         </a>
+        <div class="collapse <?= navParentShow(array('strategies', 'objectives', 'kpi_management')) ?>" id="mStrategyPlanSub">
+          <ul>
+            <li><a class="<?= navActive('strategies') ?>" href="strategies.php">🎯 ยุทธศาสตร์</a></li>
+            <li><a class="<?= navActive('objectives') ?>" href="objectives.php">🎯 เป้าประสงค์</a></li>
+            <li><a class="<?= navActive('kpi_management') ?>" href="kpi_management.php">📐 ตัวชี้วัด KPI</a></li>
+          </ul>
+        </div>
       </li>
       <?php endif; ?>
 
