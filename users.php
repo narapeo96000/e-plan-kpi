@@ -36,7 +36,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'user' && !empty($_GET['id'])) {
     $ur = $conn->query("SELECT id, username, name, position, department, agency_id, role, status FROM users WHERE id = $ajaxId LIMIT 1");
     if ($ur && ($urow = $ur->fetch_assoc())) {
         if ($isOfficeUser) {
-            if ((int)$urow['agency_id'] !== $myAgencyId || $urow['role'] !== 'user') {
+            if ((int)$urow['agency_id'] !== $myAgencyId || !in_array($urow['role'], array('user', 'office'), true)) {
                 echo json_encode(array('error' => 'ไม่มีสิทธิ์แก้ไขผู้ใช้นี้'), JSON_UNESCAPED_UNICODE);
                 exit;
             }
@@ -70,15 +70,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'กรุณากรอกข้อมูลให้ครบถ้วน';
         } elseif ($isOfficeUser && $agencyId !== $myAgencyId) {
             $error = 'ผู้ประสานงานหน่วยงานไม่สามารถเปลี่ยนหน่วยงานได้';
-        } elseif ($isOfficeUser && $role !== 'user') {
-            $error = 'ผู้ประสานงานหน่วยงานสามารถกำหนดสิทธิ์เป็นผู้ใช้ทั่วไป (user) เท่านั้น';
+        } elseif ($isOfficeUser && !in_array($role, array('user', 'office'), true)) {
+            $error = 'ผู้ประสานงานหน่วยงานสามารถกำหนดสิทธิ์ได้เฉพาะผู้ใช้ทั่วไป (user) หรือผู้ประสานงานหน่วยงาน (office) เท่านั้น';
         } elseif ($agencyId <= 0) {
             $error = 'กรุณาเลือกหน่วยงานการศึกษา (สังกัด)';
         } elseif (($agencyRes = $conn->query("SELECT id FROM agencies WHERE id = $agencyId LIMIT 1")) === false || $agencyRes->num_rows === 0) {
             $error = 'หน่วยงานที่เลือกไม่ถูกต้อง กรุณาเลือกใหม่';
         } else {
             if ($userId > 0) {
-                // office: แก้ไขได้เฉพาะผู้ใช้ในหน่วยงานของตนเองและเป็นบทบาท user เท่านั้น
+                // office: แก้ไขได้เฉพาะผู้ใช้ในหน่วยงานของตนเองและเป็นบทบาท user/office เท่านั้น
                 if ($isOfficeUser) {
                     $targetAgency = 0;
                     $targetRole = '';
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     if ($targetAgency !== $myAgencyId) {
                         $error = 'ไม่สามารถแก้ไขผู้ใช้ต่างหน่วยงานได้';
-                    } elseif ($targetRole !== 'user') {
+                    } elseif (!in_array($targetRole, array('user', 'office'), true)) {
                         $error = 'ไม่สามารถแก้ไขผู้ใช้ที่มีบทบาทสูงกว่าได้';
                     }
                 }
@@ -174,8 +174,8 @@ if ($action === 'toggle_status' && $userId > 0) {
             header('Location: users.php');
             exit;
         }
-        if ($isOfficeUser && $row['role'] !== 'user') {
-            setFlash('error', 'ผู้ประสานงานหน่วยงานสามารถจัดการได้เฉพาะผู้ใช้ทั่วไป (user) เท่านั้น');
+        if ($isOfficeUser && !in_array($row['role'], array('user', 'office'), true)) {
+            setFlash('error', 'ผู้ประสานงานหน่วยงานสามารถจัดการได้เฉพาะผู้ใช้ทั่วไป (user) หรือผู้ประสานงานหน่วยงาน (office) เท่านั้น');
             header('Location: users.php');
             exit;
         }
@@ -234,8 +234,8 @@ if ($action === 'reset' && $userId > 0 && $_SERVER['REQUEST_METHOD'] === 'POST' 
             header('Location: users.php');
             exit;
         }
-        if ($tRow && $tRow['role'] !== 'user') {
-            setFlash('error', 'ผู้ประสานงานหน่วยงานสามารถรีเซ็ตรหัสผ่านได้เฉพาะผู้ใช้ทั่วไป (user) เท่านั้น');
+        if ($tRow && !in_array($tRow['role'], array('user', 'office'), true)) {
+            setFlash('error', 'ผู้ประสานงานหน่วยงานสามารถรีเซ็ตรหัสผ่านได้เฉพาะผู้ใช้ทั่วไป (user) หรือผู้ประสานงานหน่วยงาน (office) เท่านั้น');
             header('Location: users.php');
             exit;
         }
@@ -318,7 +318,7 @@ if ($isOfficeUser) {
                         <div>
                             <div class="text-uppercase section-title mb-2">👥 ผู้ใช้ระบบ</div>
                             <h1 class="h3 fw-bold mb-2">จัดการผู้ใช้งาน</h1>
-                            <p class="text-muted mb-0"><?= $isManageAll ? 'ผู้ดูแลระบบ/ผู้กำหนดตัวชี้วัด KPI สามารถเพิ่ม ลบ แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานบัญชีทั้งหมดได้' : 'ผู้ประสานงานหน่วยงานสามารถเพิ่ม แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานเฉพาะผู้ใช้ทั่วไป (user) ในหน่วยงานของตนเองเท่านั้น' ?></p>
+                            <p class="text-muted mb-0"><?= $isManageAll ? 'ผู้ดูแลระบบ/ผู้กำหนดตัวชี้วัด KPI สามารถเพิ่ม ลบ แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานบัญชีทั้งหมดได้' : 'ผู้ประสานงานหน่วยงานสามารถเพิ่ม แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานผู้ใช้ทั่วไป (user) หรือผู้ประสานงานหน่วยงาน (office) ในหน่วยงานของตนเองเท่านั้น' ?></p>
                         </div>
                         <button type="button" class="btn btn-primary" onclick="openUserModal(0)">
                             ➕ เพิ่มผู้ใช้ใหม่
@@ -367,8 +367,8 @@ if ($isOfficeUser) {
                         <span class="text-muted small me-1">กรองตามสิทธิ์:</span>
                         <?php foreach ($roleFilterTabs as $rkey => $rlabel): ?>
                             <?php
-                            if ($isOfficeUser && $rkey !== 'all' && $rkey !== 'user') {
-                                continue; // office เห็นได้เฉพาะผู้ใช้ทั่วไป
+                            if ($isOfficeUser && !in_array($rkey, array('all', 'user', 'office'), true)) {
+                                continue; // office เห็นได้เฉพาะผู้ใช้ทั่วไป (user) หรือผู้ประสานงานหน่วยงาน (office)
                             }
                             $q = $rkey === 'all' ? 'users.php' : 'users.php?role=' . urlencode($rkey);
                             $active = ($filterRole === $rkey);
@@ -479,9 +479,11 @@ if ($isOfficeUser) {
                         <div class="col-12 col-md-6">
                             <label class="form-label">บทบาท</label>
                             <?php if ($isOfficeUser): ?>
-                                <input type="hidden" name="role" id="userRole" value="user">
-                                <input class="form-control" type="text" id="userRoleLocked" value="<?= htmlspecialchars(roleLabel('user')) ?>" readonly>
-                                <div class="form-text">ผู้ประสานงานหน่วยงานกำหนดบทบาทได้เฉพาะผู้ใช้ทั่วไป (user)</div>
+                                <select class="form-select" name="role" id="userRole">
+                                    <option value="user">ผู้ใช้ทั่วไป (user) — เพิ่ม/แก้ไข/รายงานโครงการของตนเองเท่านั้น</option>
+                                    <option value="office">ผู้ประสานงานหน่วยงาน (office) — เพิ่ม/แก้ไข/รายงานโครงการของหน่วยงานตนเองได้</option>
+                                </select>
+                                <div class="form-text">ผู้ประสานงานหน่วยงานกำหนดบทบาทได้เฉพาะผู้ใช้ทั่วไป (user) หรือผู้ประสานงานหน่วยงาน (office)</div>
                             <?php else: ?>
                                 <select class="form-select" name="role" id="userRole">
                                     <option value="user">ผู้ใช้ทั่วไป (user) — เพิ่ม/แก้ไข/รายงานโครงการของตนเองเท่านั้น</option>
@@ -551,8 +553,8 @@ function openUserModal(id) {
                 document.getElementById('userDepartment').value = u.department || '';
                 if (!isOfficeUser) {
                     document.getElementById('userAgencyId').value = u.agency_id || '';
-                    document.getElementById('userRole').value = u.role || 'user';
                 }
+                document.getElementById('userRole').value = u.role || 'user';
                 document.getElementById('userStatus').value = u.status || 'active';
             })
             .catch(function () {
