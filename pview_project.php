@@ -126,6 +126,8 @@ if ($fromOkr) {
     $project['report_links'] = isset($project['report_links']) ? $project['report_links'] : '';
     $project['last_updated_at'] = isset($project['updated_at']) ? $project['updated_at'] : '';
 }
+// หน่วยงาน (เจ้าของโครงการ) ใช้ข้อมูลจาก agency เป็นหลัก
+$project['school_name'] = isset($project['school_name']) && $project['school_name'] !== '' ? $project['school_name'] : (isset($project['department']) ? $project['department'] : '');
 $budget_percent = $budget_received > 0 ? round(($budget_spent / $budget_received) * 100, 2) : 0;
 $achieve = checkProjectAchieved($conn, $fromOkr ? 'okr' : 'project', (int)$id);
 
@@ -236,7 +238,7 @@ if (!$fromOkr) {
         <div class="card-body">
           <div class="text-muted small mb-1">ผู้รับผิดชอบ</div>
           <div class="fw-semibold"><?= htmlspecialchars(($project['owner_name'] ?: $project['owner_username']) ?: '-') ?></div>
-          <div class="text-muted small mt-2">หน่วยงาน: <?= htmlspecialchars($project['department'] ?: '-') ?></div>
+          <div class="text-muted small mt-2">หน่วยงาน: <?= htmlspecialchars($project['school_name'] ?: '-') ?></div>
         </div>
       </div>
     </div>

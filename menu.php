@@ -239,6 +239,16 @@ function navParentShow($pages) {
           <span class="sidebar-text">ตั้งค่าระบบ</span>
         </a>
       </li>
+
+      <?php if (!isLoggedIn()): ?>
+      <li><hr class="sidebar-hr"></li>
+      <li class="sidebar-item">
+        <a class="sidebar-link" href="login.php">
+          <span class="sidebar-icon">🔐</span>
+          <span class="sidebar-text">ลงชื่อเข้าใช้</span>
+        </a>
+      </li>
+      <?php endif; ?>
     </ul>
   </div>
 
@@ -253,12 +263,16 @@ function navParentShow($pages) {
       <span class="sidebar-icon">🚪</span>
       <span class="sidebar-text">ออกจากระบบ</span>
     </a>
-    <?php else: ?>
-    <a class="sidebar-link" href="login.php">
-      <span class="sidebar-icon">🔐</span>
-      <span class="sidebar-text">ลงชื่อเข้าใช้</span>
-    </a>
     <?php endif; ?>
+    <div class="sidebar-footer-dev">
+      <div class="dev-title">ผู้พัฒนาระบบ</div>
+      <?= htmlspecialchars($office_developer ?: '—') ?>
+      <?php if ($office_email || $office_tel): ?>
+        <div class="dev-title mt-1">ติดต่อ</div>
+        <?php if ($office_email): ?><div>✉️ <?= htmlspecialchars($office_email) ?></div><?php endif; ?>
+        <?php if ($office_tel): ?><div>📞 <?= htmlspecialchars($office_tel) ?></div><?php endif; ?>
+      <?php endif; ?>
+    </div>
   </div>
 </aside>
 
@@ -416,6 +430,16 @@ function navParentShow($pages) {
         </a>
       </li>
 
+      <!-- Login (เฉพาะยังไม่ได้ล็อกอิน) -->
+      <?php if (!isLoggedIn()): ?>
+      <li><hr class="mobile-nav-hr"></li>
+      <li class="mobile-nav-item">
+        <a class="mobile-nav-link" href="login.php">
+          <span>🔐</span> ลงชื่อเข้าใช้
+        </a>
+      </li>
+      <?php endif; ?>
+
       <!-- Logout -->
       <?php if (isLoggedIn()): ?>
       <li class="mobile-nav-item mt-2 border-top pt-2">
@@ -425,6 +449,17 @@ function navParentShow($pages) {
       </li>
       <?php endif; ?>
     </ul>
+
+    <!-- Developer & contact -->
+    <div class="p-3 border-top">
+      <div class="small text-muted fw-medium mb-1">ผู้พัฒนาระบบ</div>
+      <div class="small"><?= htmlspecialchars($office_developer ?: '—') ?></div>
+      <?php if ($office_email || $office_tel): ?>
+        <div class="small text-muted fw-medium mt-2 mb-1">ติดต่อ</div>
+        <?php if ($office_email): ?><div class="small">✉️ <?= htmlspecialchars($office_email) ?></div><?php endif; ?>
+        <?php if ($office_tel): ?><div class="small">📞 <?= htmlspecialchars($office_tel) ?></div><?php endif; ?>
+      <?php endif; ?>
+    </div>
   </div>
 </div>
 

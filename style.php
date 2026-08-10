@@ -361,6 +361,40 @@ $theme_secondary = isset($theme_secondary) ? $theme_secondary : '#0ea5e9';
         display: none;
     }
 
+    .sidebar-footer-dev {
+        margin: 0.25rem 0.35rem 0.25rem;
+        padding: 0.4rem 0.6rem;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.06);
+        font-size: 0.7rem;
+        line-height: 1.5;
+        color: rgba(255,255,255,0.7);
+        overflow-wrap: anywhere;
+    }
+
+    .sidebar-footer-dev .dev-title {
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255,255,255,0.4);
+        margin-bottom: 0.15rem;
+    }
+
+    .sidebar.collapsed .sidebar-footer-dev {
+        display: none;
+    }
+
+    .sidebar-hr {
+        height: 1px;
+        background: rgba(255,255,255,0.18);
+        border: none;
+        margin: 0.35rem 0.85rem;
+    }
+
+    .sidebar.collapsed .sidebar-hr {
+        display: none;
+    }
+
     /* ===== MAIN CONTENT ===== */
     .main-content {
         min-height: calc(100vh - 60px);
@@ -410,6 +444,13 @@ $theme_secondary = isset($theme_secondary) ? $theme_secondary : '#0ea5e9';
 
     .mobile-nav-item {
         border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+
+    .mobile-nav-hr {
+        height: 1px;
+        background: #cbd5e1;
+        border: none;
+        margin: 0;
     }
 
     .mobile-nav-link {

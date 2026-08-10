@@ -11,6 +11,11 @@
 - pattern เดียวกันทั้ง 4 หน้า: POST + `X-Requested-With: XMLHttpRequest` + CSRF → JSON `{success, message/error}` → ปิด modal + reload
 - Deploy ขึ้น server แล้วทั้งหมด: `project_form.php`, `kpi_management.php`, `strategies.php`, `objectives.php`, `schools.php`
 
+## 2026-08-10 — โครงการใช้ข้อมูลหน่วยงาน (เจ้าของโครงการ) เป็นหลัก
+- `pview_project.php`: หน้าแสดงรายละเอียดโครงการเดิมแสดง "หน่วยงาน" จากคอลัมน์ `department` ซึ่งส่วนใหญ่เป็นค่าว่าง → แสดง "-" — แก้ให้ใช้ข้อมูลหน่วยงานเจ้าของโครงการ (`agency_id` → `agencies.agency_name`) เป็นหลัก, fallback เป็น `department` เฉพาะเมื่อไม่มีหน่วยงาน — สอดคล้องกับหลักที่ใช้ใน `projects.php`, `report.php`, `export_excel.php`, `export_pdf.php`, `index.php` อยู่แล้ว
+- ตรวจบน server: โครงการ narasci (id=69) แสดง "ศูนย์วิทยาศาสตร์เพื่อการศึกษานราธิวาส" (ชื่อเต็มจาก agencies) แทน code "narasci", โครงการ id=97 แสดง "สพป.นธ.1" (เดิมเป็น "-"), โครงการที่ไม่มีหน่วยงานจริงยังคงแสดง "-"
+- Deploy ขึ้น server แล้ว: `pview_project.php`
+
 ## 2026-08-09 — เพิ่มหน้าเอกสารดาวน์โหลด + เริ่มโครงสร้าง เป้าประสงค์ (objectives)
 - เพิ่มหน้า `download_docs.php`: แสดงรายการเอกสารให้ทุกคนดาวน์โหลด (PDF/Word/Excel/PowerPoint/zip/rar) — admin อัปโหลด/ซ่อน/ลบเอกสารได้ (CSRF + logfile), ไฟล์เก็บใน `uploads/docs/` จำกัด 10 MB
 - เพิ่มตาราง `download_docs` (title, description, file, status, sort_order) ใน `office_budget_edu_db.sql` + `migration_upgrade.sql` และรัน migration บน server แล้ว
