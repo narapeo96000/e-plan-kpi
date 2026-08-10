@@ -12,7 +12,17 @@ require_once __DIR__ . '/db.php';
  * @var string $office_tel
  */
 
-requireAdmin();
+requireLogin();
+
+// ควบคุมสิทธิ์: admin จัดการได้ทุกอย่าง, office จัดการได้เฉพาะผู้ใช้ในหน่วยงานของตนเอง, user เข้าถึงไม่ได้
+$isAdminUser = isAdmin();
+$isOfficeUser = isOffice();
+$currentUserId = currentUserId();
+$myAgencyId = $isOfficeUser ? (int)currentAgencyId() : 0;
+if (!$isAdminUser && !$isOfficeUser) {
+    header('Location: index.php');
+    exit;
+}
 
 $fiscalYear = !empty($fiscal_year) ? $fiscal_year : date('Y') + 543;
 $action = isset($_GET['action']) ? $_GET['action'] : '';
@@ -35,32 +45,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($username) || empty($name) || empty($role) || empty($status)) {
             $error = 'กรุณากรอกข้อมูลให้ครบถ้วน';
+        } elseif ($isOfficeUser && $agencyId !== $myAgencyId) {
+            $error = 'ผู้ประสานงานหน่วยงานไม่สามารถเปลี่ยนหน่วยงานได้';
+        } elseif ($isOfficeUser && $role !== 'user') {
+            $error = 'ผู้ประสานงานหน่วยงานสามารถกำหนดสิทธิ์เป็นผู้ใช้ทั่วไป (user) เท่านั้น';
         } elseif ($agencyId <= 0) {
             $error = 'กรุณาเลือกหน่วยงานการศึกษา (สังกัด)';
         } elseif (($agencyRes = $conn->query("SELECT id FROM agencies WHERE id = $agencyId LIMIT 1")) === false || $agencyRes->num_rows === 0) {
             $error = 'หน่วยงานที่เลือกไม่ถูกต้อง กรุณาเลือกใหม่';
         } else {
             if ($userId > 0) {
-                $checkSql = "SELECT id FROM users WHERE username = '" . $conn->real_escape_string($username) . "' AND id != $userId LIMIT 1";
-                $checkRes = $conn->query($checkSql);
-                if ($checkRes && $checkRes->num_rows > 0) {
-                    $error = 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
-                } else {
-                    $updateFields = "username='" . $conn->real_escape_string($username) . "', name='" . $conn->real_escape_string($name) . "', position='" . $conn->real_escape_string($position) . "', department='" . $conn->real_escape_string($department) . "', role='" . $conn->real_escape_string($role) . "', status='" . $conn->real_escape_string($status) . "', agency_id=$agencyId";
-                    if (!empty($password)) {
-                        $hash = password_hash($password, PASSWORD_DEFAULT);
-                        $updateFields .= ", password='" . $conn->real_escape_string($hash) . "'";
+                // office: แก้ไขได้เฉพาะผู้ใช้ในหน่วยงานของตนเองและเป็นบทบาท user เท่านั้น
+                if ($isOfficeUser) {
+                    $targetAgency = 0;
+                    $targetRole = '';
+                    $tRes = $conn->query("SELECT agency_id, role FROM users WHERE id = $userId LIMIT 1");
+                    if ($tRes && ($tRow = $tRes->fetch_assoc())) {
+                        $targetAgency = (int)$tRow['agency_id'];
+                        $targetRole = $tRow['role'];
                     }
-                    $conn->query("UPDATE users SET $updateFields WHERE id = $userId");
-                    $success = 'บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้ว';
-                    logfile($conn, 'แก้ไข', 'users', $userId, array(
-                        'username' => $username,
-                        'name' => $name,
-                        'role' => $role,
-                        'status' => $status,
-                    ));
-                    header('Location: users.php');
-                    exit;
+                    if ($targetAgency !== $myAgencyId) {
+                        $error = 'ไม่สามารถแก้ไขผู้ใช้ต่างหน่วยงานได้';
+                    } elseif ($targetRole !== 'user') {
+                        $error = 'ไม่สามารถแก้ไขผู้ใช้ที่มีบทบาทสูงกว่าได้';
+                    }
+                }
+                if (empty($error)) {
+                    $checkSql = "SELECT id FROM users WHERE username = '" . $conn->real_escape_string($username) . "' AND id != $userId LIMIT 1";
+                    $checkRes = $conn->query($checkSql);
+                    if ($checkRes && $checkRes->num_rows > 0) {
+                        $error = 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
+                    } else {
+                        $updateFields = "username='" . $conn->real_escape_string($username) . "', name='" . $conn->real_escape_string($name) . "', position='" . $conn->real_escape_string($position) . "', department='" . $conn->real_escape_string($department) . "', role='" . $conn->real_escape_string($role) . "', status='" . $conn->real_escape_string($status) . "', agency_id=$agencyId";
+                        if (!empty($password)) {
+                            $hash = password_hash($password, PASSWORD_DEFAULT);
+                            $updateFields .= ", password='" . $conn->real_escape_string($hash) . "'";
+                        }
+                        $conn->query("UPDATE users SET $updateFields WHERE id = $userId");
+                        $success = 'บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้ว';
+                        logfile($conn, 'แก้ไข', 'users', $userId, array(
+                            'username' => $username,
+                            'name' => $name,
+                            'role' => $role,
+                            'status' => $status,
+                        ));
+                        header('Location: users.php');
+                        exit;
+                    }
                 }
             } else {
                 $checkSql = "SELECT id FROM users WHERE username = '" . $conn->real_escape_string($username) . "' LIMIT 1";
@@ -98,8 +129,18 @@ if ($action === 'toggle_status' && $userId > 0) {
         header('Location: users.php');
         exit;
     }
-    $userRes = $conn->query("SELECT username, status FROM users WHERE id = $userId LIMIT 1");
+    $userRes = $conn->query("SELECT username, status, agency_id FROM users WHERE id = $userId LIMIT 1");
     if ($userRes && $row = $userRes->fetch_assoc()) {
+        if ($isOfficeUser && (int)$row['agency_id'] !== $myAgencyId) {
+            setFlash('error', 'ไม่สามารถระงับ/เปิดใช้งานผู้ใช้ต่างหน่วยงานได้');
+            header('Location: users.php');
+            exit;
+        }
+        if ($userId === $currentUserId) {
+            setFlash('error', 'ไม่สามารถระงับการใช้งานบัญชีของตนเองได้');
+            header('Location: users.php');
+            exit;
+        }
         $newStatus = $row['status'] === 'active' ? 'inactive' : 'active';
         $conn->query("UPDATE users SET status = '$newStatus' WHERE id = $userId");
         logfile($conn, 'เปลี่ยนสถานะ', 'users', $userId, array(
@@ -111,7 +152,45 @@ if ($action === 'toggle_status' && $userId > 0) {
     exit;
 }
 
+// ลบผู้ใช้ — เฉพาะ admin เท่านั้น
+if ($action === 'delete' && $userId > 0 && $isAdminUser) {
+    $gotToken = isset($_GET['csrf']) ? $_GET['csrf'] : '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $gotToken)) {
+        setFlash('error', 'CSRF token ไม่ถูกต้อง กรุณาลองใหม่');
+        header('Location: users.php');
+        exit;
+    }
+    if ($userId === $currentUserId) {
+        setFlash('error', 'ไม่สามารถลบบัญชีของตนเองได้');
+        header('Location: users.php');
+        exit;
+    }
+    $userRes = $conn->query("SELECT username, role FROM users WHERE id = $userId LIMIT 1");
+    if ($userRes && $row = $userRes->fetch_assoc()) {
+        if ($row['role'] === 'admin' && $userId === 1) {
+            setFlash('error', 'ไม่สามารถลบบัญชีผู้ดูแลระบบหลักได้');
+            header('Location: users.php');
+            exit;
+        }
+        $conn->query("DELETE FROM users WHERE id = $userId");
+        logfile($conn, 'ลบ', 'users', $userId, array(
+            'username' => isset($row['username']) ? $row['username'] : '',
+        ));
+        setFlash('success', 'ลบผู้ใช้งานเรียบร้อยแล้ว');
+    }
+    header('Location: users.php');
+    exit;
+}
+
 if ($action === 'reset' && $userId > 0 && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
+    if ($isOfficeUser) {
+        $tRes = $conn->query("SELECT agency_id FROM users WHERE id = $userId LIMIT 1");
+        if ($tRes && ($tRow = $tRes->fetch_assoc()) && (int)$tRow['agency_id'] !== $myAgencyId) {
+            setFlash('error', 'ไม่สามารถรีเซ็ตรหัสผ่านผู้ใช้ต่างหน่วยงานได้');
+            header('Location: users.php');
+            exit;
+        }
+    }
     $newPassword = trim(isset($_POST['new_password']) ? $_POST['new_password'] : '');
     if (empty($newPassword)) {
         $error = 'กรุณากรอกรหัสผ่านใหม่';
@@ -126,7 +205,13 @@ if ($action === 'reset' && $userId > 0 && $_SERVER['REQUEST_METHOD'] === 'POST' 
 }
 
 $users = array();
-$result = $conn->query("SELECT u.*, a.agency_name, a.agency_code FROM users u LEFT JOIN agencies a ON a.id = u.agency_id ORDER BY u.id ASC");
+$userSql = "SELECT u.*, a.agency_name, a.agency_code FROM users u LEFT JOIN agencies a ON a.id = u.agency_id";
+if ($isOfficeUser) {
+    // office: เห็นเฉพาะผู้ใช้ในหน่วยงานของตนเอง
+    $userSql .= " WHERE u.agency_id = " . (int)$myAgencyId;
+}
+$userSql .= " ORDER BY u.id ASC";
+$result = $conn->query($userSql);
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $users[] = $row;
@@ -136,8 +221,12 @@ if ($result) {
 $editingUser = null;
 if ($action === 'edit' && $userId > 0) {
     $userRes = $conn->query("SELECT * FROM users WHERE id = $userId LIMIT 1");
-    if ($userRes) {
-        $editingUser = $userRes->fetch_assoc();
+    if ($userRes && $editingUser = $userRes->fetch_assoc()) {
+        if ($isOfficeUser && (int)$editingUser['agency_id'] !== $myAgencyId) {
+            setFlash('error', 'ไม่สามารถแก้ไขผู้ใช้ต่างหน่วยงานได้');
+            header('Location: users.php');
+            exit;
+        }
     }
 }
 
@@ -170,7 +259,7 @@ if ($agRes) {
                         <div>
                             <div class="text-uppercase section-title mb-2">👥 ผู้ใช้ระบบ</div>
                             <h1 class="h3 fw-bold mb-2">จัดการผู้ใช้งาน</h1>
-                            <p class="text-muted mb-0">ผู้ดูแลระบบสามารถเพิ่ม แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานบัญชีทั้งหมดได้</p>
+                            <p class="text-muted mb-0"><?= $isAdminUser ? 'ผู้ดูแลระบบสามารถเพิ่ม ลบ แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานบัญชีทั้งหมดได้' : 'ผู้ประสานงานหน่วยงานสามารถเพิ่ม แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานเฉพาะผู้ใช้ในหน่วยงานของตนเองเท่านั้น' ?></p>
                         </div>
                     </div>
                 </div>
@@ -182,6 +271,7 @@ if ($agRes) {
             <?php if (!empty($success)): ?>
                 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
             <?php endif; ?>
+            <?php getFlash(); ?>
 
             <div class="row g-4">
                 <div class="col-12 col-xl-7">
@@ -212,7 +302,9 @@ if ($agRes) {
                                                     <a class="btn btn-sm btn-outline-secondary" href="users.php?action=toggle_status&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>">
                                                         <?= $user['status'] === 'active' ? 'ระงับ' : 'เปิดใช้งาน' ?>
                                                     </a>
-                                                    
+                                                    <?php if ($isAdminUser && (int)$user['id'] !== $currentUserId): ?>
+                                                        <a class="btn btn-sm btn-outline-danger" href="users.php?action=delete&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>" onclick="return confirm('ยืนยันการลบผู้ใช้ <?= htmlspecialchars($user['name'], ENT_QUOTES) ?> ?');">ลบ</a>
+                                                    <?php endif; ?>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -244,23 +336,44 @@ if ($agRes) {
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">หน่วยงานการศึกษา (สังกัด) <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="agency_id" required>
-                                        <option value="">-- เลือกหน่วยงานการศึกษา --</option>
-                                        <?php foreach ($agencies as $agency): ?>
-                                            <option value="<?= (int)$agency['id'] ?>" <?= (isset($editingUser['agency_id']) && (int)$editingUser['agency_id'] === (int)$agency['id']) ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($agency['agency_name'] . ' (' . $agency['agency_code'] . ')') ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <?php if ($isOfficeUser): ?>
+                                        <?php
+                                        $lockedAgencyName = '';
+                                        foreach ($agencies as $agency) {
+                                            if ((int)$agency['id'] === $myAgencyId) {
+                                                $lockedAgencyName = $agency['agency_name'] . ' (' . $agency['agency_code'] . ')';
+                                                break;
+                                            }
+                                        }
+                                        ?>
+                                        <input type="hidden" name="agency_id" value="<?= (int)$myAgencyId ?>">
+                                        <input class="form-control" type="text" value="<?= htmlspecialchars($lockedAgencyName) ?>" readonly>
+                                        <div class="form-text">หน่วยงานถูกล็อกตามสิทธิ์ของคุณ ไม่สามารถเปลี่ยนได้</div>
+                                    <?php else: ?>
+                                        <select class="form-select" name="agency_id" required>
+                                            <option value="">-- เลือกหน่วยงานการศึกษา --</option>
+                                            <?php foreach ($agencies as $agency): ?>
+                                                <option value="<?= (int)$agency['id'] ?>" <?= (isset($editingUser['agency_id']) && (int)$editingUser['agency_id'] === (int)$agency['id']) ? 'selected' : '' ?>>
+                                                    <?= htmlspecialchars($agency['agency_name'] . ' (' . $agency['agency_code'] . ')') ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">บทบาท</label>
-                                    <select class="form-select" name="role">
-                                        <option value="user" <?= isset($editingUser['role']) && $editingUser['role'] === 'user' ? 'selected' : '' ?>>ผู้ใช้ทั่วไป (user) — เพิ่ม/แก้ไข/รายงานโครงการของตนเองเท่านั้น</option>
-                                        <option value="office" <?= isset($editingUser['role']) && $editingUser['role'] === 'office' ? 'selected' : '' ?>>ผู้ประสานงานหน่วยงาน (office) — เพิ่ม/แก้ไข/รายงานโครงการของหน่วยงานตนเองได้</option>
-                                        <option value="plan" <?= isset($editingUser['role']) && $editingUser['role'] === 'plan' ? 'selected' : '' ?>>ผู้กำหนดตัวชี้วัด KPI (plan) — กำหนดตัวชี้วัดร่วมสำหรับจังหวัด/หน่วยงาน</option>
-                                        <option value="admin" <?= isset($editingUser['role']) && $editingUser['role'] === 'admin' ? 'selected' : '' ?>>ผู้ดูแลระบบ (admin) — เข้าถึงทุกอย่าง</option>
-                                    </select>
+                                    <?php if ($isOfficeUser): ?>
+                                        <input type="hidden" name="role" value="user">
+                                        <input class="form-control" type="text" value="<?= htmlspecialchars(roleLabel('user')) ?>" readonly>
+                                        <div class="form-text">ผู้ประสานงานหน่วยงานกำหนดบทบาทได้เฉพาะผู้ใช้ทั่วไป (user)</div>
+                                    <?php else: ?>
+                                        <select class="form-select" name="role">
+                                            <option value="user" <?= isset($editingUser['role']) && $editingUser['role'] === 'user' ? 'selected' : '' ?>>ผู้ใช้ทั่วไป (user) — เพิ่ม/แก้ไข/รายงานโครงการของตนเองเท่านั้น</option>
+                                            <option value="office" <?= isset($editingUser['role']) && $editingUser['role'] === 'office' ? 'selected' : '' ?>>ผู้ประสานงานหน่วยงาน (office) — เพิ่ม/แก้ไข/รายงานโครงการของหน่วยงานตนเองได้</option>
+                                            <option value="plan" <?= isset($editingUser['role']) && $editingUser['role'] === 'plan' ? 'selected' : '' ?>>ผู้กำหนดตัวชี้วัด KPI (plan) — กำหนดตัวชี้วัดร่วมสำหรับจังหวัด/หน่วยงาน</option>
+                                            <option value="admin" <?= isset($editingUser['role']) && $editingUser['role'] === 'admin' ? 'selected' : '' ?>>ผู้ดูแลระบบ (admin) — เข้าถึงทุกอย่าง</option>
+                                        </select>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">สถานะ</label>

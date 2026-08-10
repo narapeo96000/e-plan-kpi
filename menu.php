@@ -218,13 +218,15 @@ function navParentShow($pages) {
       <li class="sidebar-label"><span class="sidebar-text">ระบบ & ความปลอดภัย</span></li>
 
       <!-- Admin only items -->
-      <?php if (isAdmin()): ?>
+      <?php if (isAdmin() || isOffice()): ?>
       <li class="sidebar-item">
         <a class="sidebar-link <?= navActive('users') ?>" href="users.php">
           <span class="sidebar-icon">👥</span>
           <span class="sidebar-text">จัดการผู้ใช้งาน</span>
         </a>
       </li>
+      <?php endif; ?>
+      <?php if (isAdmin()): ?>
       <li class="sidebar-item">
         <a class="sidebar-link <?= navActive('logfile') ?>" href="logfile.php">
           <span class="sidebar-icon">📋</span>
@@ -411,13 +413,15 @@ function navParentShow($pages) {
       </li>
 
       <!-- Admin section -->
-      <?php if (isAdmin()): ?>
+      <?php if (isAdmin() || isOffice()): ?>
       <li class="mobile-nav-section">ระบบ & ความปลอดภัย</li>
       <li class="mobile-nav-item">
         <a class="mobile-nav-link <?= navActive('users') ?>" href="users.php">
           <span>👥</span> จัดการผู้ใช้งาน
         </a>
       </li>
+      <?php endif; ?>
+      <?php if (isAdmin()): ?>
       <li class="mobile-nav-item">
         <a class="mobile-nav-link <?= navActive('logfile') ?>" href="logfile.php">
           <span>📋</span> บันทึกการใช้งาน
