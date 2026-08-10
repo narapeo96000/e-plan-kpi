@@ -235,12 +235,14 @@ function navParentShow($pages) {
       </li>
       <?php endif; ?>
 
+      <?php if (isAdminOrPlan()): ?>
       <li class="sidebar-item">
         <a class="sidebar-link <?= navActive('setting') ?>" href="setting.php">
           <span class="sidebar-icon">⚙️</span>
           <span class="sidebar-text">ตั้งค่าระบบ</span>
         </a>
       </li>
+      <?php endif; ?>
 
       <?php if (!isLoggedIn()): ?>
       <li><hr class="sidebar-hr"></li>
@@ -428,11 +430,13 @@ function navParentShow($pages) {
         </a>
       </li>
       <?php endif; ?>
+      <?php if (isAdminOrPlan()): ?>
       <li class="mobile-nav-item">
         <a class="mobile-nav-link <?= navActive('setting') ?>" href="setting.php">
           <span>⚙️</span> ตั้งค่าระบบ
         </a>
       </li>
+      <?php endif; ?>
 
       <!-- Login (เฉพาะยังไม่ได้ล็อกอิน) -->
       <?php if (!isLoggedIn()): ?>
