@@ -2,6 +2,16 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-08-10 — บันทึกผู้แก้ไขโครงการตามระดับบทบาท (edited_by_role)
+- เพิ่มคอลัมน์ `edited_by_role` (VARCHAR(20)) ในตาราง `projects` และ `okr_projects` — เก็บบทบาทของผู้แก้ไข/ผู้บันทึกล่าสุด (admin / office / user) แยกจากการแก้ไขแทนเจ้าของ เพื่อใช้ประกอบการรายงานและตรวจสอบที่มา
+- `project_save.php`: บันทึก `edited_by_role = currentRole()` ทั้งกรณี UPDATE และ INSERT (พร้อมกับ `last_updated_by` เดิม), เพิ่มใน audit log
+- `okr_project_save.php`: บันทึก `last_updated_by` + `edited_by_role` ใน INSERT ด้วย
+- แสดง badge "แก้ไขโดย <บทบาท>" ใน: `projects.php` (รายการโครงการ), `project_form.php` (แถบแก้ไขล่าสุด), `pview_project.php` (การ์ดผู้รับผิดชอบ) — ใช้ `roleLabel()` เดิม
+- `migration_upgrade.sql`: block 1b2/1b3 เพิ่มคอลัมน์แบบ idempotent (รันบน server แล้วผ่าน: 127 statements ok, 0 fail — ใช้ multi_query drain)
+- `office_budget_edu_db.sql`: อัปเดต schema ของ `projects` + `okr_projects`
+- ทดสอบบน server: office (nara1) แก้ไขโครงการ id=97 → DB `edited_by_role=office`, `last_updated_by=nara1`, `edited_on_behalf=1`; แสดง badge ทั้ง 3 หน้า
+- Deploy ขึ้น server แล้ว: `project_save.php`, `okr_project_save.php`, `projects.php`, `project_form.php`, `pview_project.php` + migration
+
 ## 2026-08-10 — ขยายสิทธิ์เมนูจัดการผู้ใช้งาน (admin/office/user)
 - `users.php`: เปิดให้ผู้ประสานงานหน่วยงาน (office) เข้าใช้งานได้เพิ่มเติมจากเดิมที่ admin เท่านั้น
   - **admin**: เพิ่ม ลบ แก้ไข รีเซ็ตรหัสผ่าน ระงับ/เปิดใช้งานบัญชีทั้งหมดได้ + เพิ่มปุ่ม "ลบ" (กันลบตัวเองและบัญชี admin หลัก id=1)

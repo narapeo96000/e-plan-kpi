@@ -81,7 +81,7 @@ $offset = ($page - 1) * $perPage;
 $sql = "
     SELECT p.id, p.project_id, p.title, p.status, p.progress, p.budget_allocated, p.budget_used, p.department,
            p.username, p.owner_name, p.co_owner, p.budget_source, p.is_office_total, p.updated_at, p.last_updated_by, p.result_status,
-           p.edited_on_behalf,
+           p.edited_on_behalf, p.edited_by_role,
            a.agency_name AS school_name, si.issue_name,
            COALESCE((SELECT GROUP_CONCAT(si2.issue_name ORDER BY si2.issue_no SEPARATOR ', ')
                      FROM project_strategic_issues psi
@@ -400,6 +400,9 @@ function buildProjectPaginationUrl($page, $searchQuery, $filterYear, $filterScho
                                             <div class="updated-cell">
                                                 <div class="fw-semibold text-dark">🗓️ <?= htmlspecialchars(!empty($project['updated_at']) ? date('d/m/Y H:i', strtotime($project['updated_at'])) : '-') ?></div>
                                                 <div class="small text-muted">✏️ <?= htmlspecialchars($project['last_updated_by'] ?: '-') ?></div>
+                                                <?php if (!empty($project['edited_by_role'])): ?>
+                                                    <div class="small"><span class="badge bg-info-subtle text-info-emphasis mt-1">แก้ไขโดย <?= htmlspecialchars(roleLabel($project['edited_by_role'])) ?></span></div>
+                                                <?php endif; ?>
                                                 <?php if ((int)$project['edited_on_behalf'] === 1): ?>
                                                     <div class="small"><span class="badge bg-warning-subtle text-warning-emphasis mt-1">✏️ แก้ไขแทนเจ้าของ</span></div>
                                                 <?php endif; ?>

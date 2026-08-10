@@ -73,6 +73,30 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- 1b2) projects: add edited_by_role (role of last editor: admin / office / user)
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'projects'
+     AND COLUMN_NAME = 'edited_by_role') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `edited_by_role` VARCHAR(20) DEFAULT NULL AFTER `edited_on_behalf`',
+  'SELECT 1'));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 1b3) okr_projects: add edited_by_role (role of last editor: admin / office / user)
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'okr_projects'
+     AND COLUMN_NAME = 'edited_by_role') = 0,
+  'ALTER TABLE `okr_projects` ADD COLUMN `edited_by_role` VARCHAR(20) DEFAULT NULL AFTER `last_updated_by`',
+  'SELECT 1'));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 -- 1c) users: extend role enum to support admin / user / office / plan
 SET @sql = (SELECT IF(
   (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS

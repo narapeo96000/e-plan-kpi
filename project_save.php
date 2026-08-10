@@ -191,7 +191,7 @@ try {
             operation_results = ?, operated_activities = ?, problems_suggestions = ?,
             summary = ?, images = ?, video_links = ?, document_links = ?, report_links = ?,
             result_status = ?,
-            last_updated_by = ?, edited_on_behalf = ?, updated_at = NOW()
+            last_updated_by = ?, edited_on_behalf = ?, edited_by_role = ?, updated_at = NOW()
             WHERE id = ?";
 
         $stmt = $pdo->prepare($sql);
@@ -204,7 +204,7 @@ try {
             $operationResults, $operatedActivities, $problemsSuggestions,
             $summary, $images, $videoLinks, $documentLinks, $reportLinks,
             $resultStatus,
-            $currentUser, $editedOnBehalf, $projectId
+            $currentUser, $editedOnBehalf, currentRole(), $projectId
         ));
     } else {
         // === INSERT ===
@@ -217,7 +217,7 @@ try {
             operation_results, operated_activities, problems_suggestions,
             summary, images, video_links, document_links, report_links,
             result_status,
-            last_updated_by, created_at, updated_at
+            last_updated_by, edited_by_role, created_at, updated_at
         ) VALUES (
             ?, ?, ?, ?,
             ?, ?, ?, ?,
@@ -227,7 +227,7 @@ try {
             ?, ?, ?,
             ?, ?, ?, ?, ?,
             ?,
-            ?, NOW(), NOW()
+            ?, ?, NOW(), NOW()
         )";
 
         $stmt = $pdo->prepare($sql);
@@ -240,7 +240,7 @@ try {
             $operationResults, $operatedActivities, $problemsSuggestions,
             $summary, $images, $videoLinks, $documentLinks, $reportLinks,
             $resultStatus,
-            $currentUser
+            $currentUser, currentRole()
         ));
         $projectId = (int)$pdo->lastInsertId();
     }
@@ -276,6 +276,7 @@ try {
         'result_status' => $resultStatus,
         'kpi_ids' => array_values($kpiIds),
         'edited_by' => $currentUser,
+        'edited_by_role' => currentRole(),
         'edited_on_behalf' => $editedOnBehalf,
     );
     logfile($conn, $isEdit ? 'แก้ไข' : 'เพิ่ม', 'projects', $projectId, $newValues, $oldValues, $newValues);

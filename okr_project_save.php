@@ -129,10 +129,12 @@ try {
     $stmt = $pdo->prepare(
         "INSERT INTO okr_projects
             (project_code, fiscal_year, strategic_issue_id, title, objective, budget_allocated,
-             project_name, budget, department, objective_text, owner_user_id, owner_id, created_at)
+             project_name, budget, department, objective_text, owner_user_id, owner_id,
+             last_updated_by, last_updated_at, edited_by_role, created_at)
          VALUES
             (:project_code, :fiscal_year, :strategic_issue_id, :title, :objective, :budget_allocated,
-             :project_name, :budget, :department, :objective_text, :owner_user_id, :owner_id, NOW())"
+             :project_name, :budget, :department, :objective_text, :owner_user_id, :owner_id,
+             :last_updated_by, NOW(), :edited_by_role, NOW())"
     );
 
     $projectId = null;
@@ -154,6 +156,8 @@ try {
         $stmt->bindValue(':objective_text', $objective, PDO::PARAM_STR);
         $stmt->bindValue(':owner_user_id', $ownerId, PDO::PARAM_INT);
         $stmt->bindValue(':owner_id', $ownerId, PDO::PARAM_INT);
+        $stmt->bindValue(':last_updated_by', currentUsername(), PDO::PARAM_STR);
+        $stmt->bindValue(':edited_by_role', currentRole(), PDO::PARAM_STR);
 
         try {
             $stmt->execute();

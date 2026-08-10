@@ -239,6 +239,9 @@ if (!$fromOkr) {
           <div class="text-muted small mb-1">ผู้รับผิดชอบ</div>
           <div class="fw-semibold"><?= htmlspecialchars(($project['owner_name'] ?: $project['owner_username']) ?: '-') ?></div>
           <div class="text-muted small mt-2">หน่วยงาน: <?= htmlspecialchars($project['school_name'] ?: '-') ?></div>
+          <?php if (!empty($project['edited_by_role'])): ?>
+            <div class="small mt-2"><span class="badge bg-info-subtle text-info-emphasis">แก้ไขโดย <?= htmlspecialchars(roleLabel($project['edited_by_role'])) ?></span></div>
+          <?php endif; ?>
         </div>
       </div>
     </div>

@@ -616,6 +616,9 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                         <?php if ($isEdit): ?>
                             ✏️ แก้ไขล่าสุด: <strong><?= htmlspecialchars(isset($project['last_updated_by']) ? $project['last_updated_by'] : (isset($project['username']) ? $project['username'] : '-')) ?></strong>
                             เมื่อ <?= htmlspecialchars(date('d/m/Y H:i', strtotime(isset($project['updated_at']) ? $project['updated_at'] : $project['created_at']))) ?>
+                            <?php if (isset($project['edited_by_role']) && $project['edited_by_role'] !== ''): ?>
+                                <span class="badge bg-info-subtle text-info-emphasis">แก้ไขโดย <?= htmlspecialchars(roleLabel($project['edited_by_role'])) ?></span>
+                            <?php endif; ?>
                             <?php if (isset($project['edited_on_behalf']) && (int)$project['edited_on_behalf'] === 1): ?>
                                 <span class="badge bg-warning-subtle text-warning-emphasis">แก้ไขแทนเจ้าของ</span>
                             <?php endif; ?>
