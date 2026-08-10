@@ -26,6 +26,27 @@ if (!$isManageAll && !$isOfficeUser) {
     exit;
 }
 
+$isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+// AJAX endpoint: โหลดข้อมูลผู้ใช้รายเดียว (สำหรับ popup แก้ไข)
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'user' && !empty($_GET['id'])) {
+    header('Content-Type: application/json; charset=UTF-8');
+    $ajaxId = intval($_GET['id']);
+    $out = array();
+    $ur = $conn->query("SELECT id, username, name, position, department, agency_id, role, status FROM users WHERE id = $ajaxId LIMIT 1");
+    if ($ur && ($urow = $ur->fetch_assoc())) {
+        if ($isOfficeUser) {
+            if ((int)$urow['agency_id'] !== $myAgencyId || $urow['role'] !== 'user') {
+                echo json_encode(array('error' => 'ไม่มีสิทธิ์แก้ไขผู้ใช้นี้'), JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+        $out = $urow;
+    }
+    echo json_encode($out, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $fiscalYear = !empty($fiscal_year) ? $fiscal_year : date('Y') + 543;
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $userId = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -91,6 +112,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'role' => $role,
                             'status' => $status,
                         ));
+                        if ($isAjax) {
+                            header('Content-Type: application/json; charset=UTF-8');
+                            echo json_encode(array('success' => true, 'message' => $success), JSON_UNESCAPED_UNICODE);
+                            exit;
+                        }
                         header('Location: users.php');
                         exit;
                     }
@@ -114,12 +140,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'role' => $role,
                             'status' => $status,
                         ));
+                        if ($isAjax) {
+                            header('Content-Type: application/json; charset=UTF-8');
+                            echo json_encode(array('success' => true, 'message' => $success), JSON_UNESCAPED_UNICODE);
+                            exit;
+                        }
                         header('Location: users.php');
                         exit;
                     }
                 }
             }
         }
+    }
+    if ($isAjax && !empty($error)) {
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode(array('success' => false, 'error' => $error), JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }
 
@@ -231,23 +267,6 @@ if ($result) {
     }
 }
 
-$editingUser = null;
-if ($action === 'edit' && $userId > 0) {
-    $userRes = $conn->query("SELECT * FROM users WHERE id = $userId LIMIT 1");
-    if ($userRes && $editingUser = $userRes->fetch_assoc()) {
-        if ($isOfficeUser && (int)$editingUser['agency_id'] !== $myAgencyId) {
-            setFlash('error', 'ไม่สามารถแก้ไขผู้ใช้ต่างหน่วยงานได้');
-            header('Location: users.php');
-            exit;
-        }
-        if ($isOfficeUser && $editingUser['role'] !== 'user') {
-            setFlash('error', 'ผู้ประสานงานหน่วยงานสามารถแก้ไขได้เฉพาะผู้ใช้ทั่วไป (user) เท่านั้น');
-            header('Location: users.php');
-            exit;
-        }
-    }
-}
-
 $agencies = array();
 $agRes = $conn->query("SELECT id, agency_code, agency_name FROM agencies ORDER BY sort_order ASC, agency_name ASC");
 if ($agRes) {
@@ -256,6 +275,15 @@ if ($agRes) {
     }
 }
 
+$lockedAgencyName = '';
+if ($isOfficeUser) {
+    foreach ($agencies as $agency) {
+        if ((int)$agency['id'] === $myAgencyId) {
+            $lockedAgencyName = $agency['agency_name'] . ' (' . $agency['agency_code'] . ')';
+            break;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -279,6 +307,9 @@ if ($agRes) {
                             <h1 class="h3 fw-bold mb-2">จัดการผู้ใช้งาน</h1>
                             <p class="text-muted mb-0"><?= $isManageAll ? 'ผู้ดูแลระบบ/ผู้กำหนดตัวชี้วัด KPI สามารถเพิ่ม ลบ แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานบัญชีทั้งหมดได้' : 'ผู้ประสานงานหน่วยงานสามารถเพิ่ม แก้ไข รีเซ็ตรหัสผ่าน และระงับการใช้งานเฉพาะผู้ใช้ทั่วไป (user) ในหน่วยงานของตนเองเท่านั้น' ?></p>
                         </div>
+                        <button type="button" class="btn btn-primary" onclick="openUserModal(0)">
+                            ➕ เพิ่มผู้ใช้ใหม่
+                        </button>
                     </div>
                 </div>
             </div>
@@ -291,144 +322,215 @@ if ($agRes) {
             <?php endif; ?>
             <?php getFlash(); ?>
 
-            <div class="row g-4">
-                <div class="col-12 col-xl-7">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>ชื่อ<br>username</th>
-                                            <th>ตำแหน่ง/หน่วยงาน</th>
-                                            <th>สิทธิ์</th>
-                                            <th>สถานะ</th>
-                                            <th>การจัดการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($users as $index => $user): ?>
-                                            <tr>
-                                                <td><?= $index + 1 ?></td>
-                                                <td><?= htmlspecialchars($user['name']) ?><br><font color="green"><?= htmlspecialchars($user['username']) ?></font></td>
-                                                <td><?= htmlspecialchars($user['position']) ?><br><?= htmlspecialchars($user['department']) ?><br><span class="text-primary">🏛️ <?= htmlspecialchars($user['agency_name'] ?: 'ไม่ระบุหน่วยงาน') ?></span></td>
-                                                <td><?= htmlspecialchars(roleLabel($user['role'])) ?></td>
-                                                <td><?= htmlspecialchars($user['status']) ?></td>
-                                                <td>
-                                                    <a class="btn btn-sm btn-outline-primary" href="users.php?action=edit&id=<?= $user['id'] ?>">แก้ไข</a>
-                                                    <a class="btn btn-sm btn-outline-secondary" href="users.php?action=toggle_status&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>">
-                                                        <?= $user['status'] === 'active' ? 'ระงับ' : 'เปิดใช้งาน' ?>
-                                                    </a>
-                                                    <?php if ($isManageAll && (int)$user['id'] !== $currentUserId): ?>
-                                                        <a class="btn btn-sm btn-outline-danger" href="users.php?action=delete&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>" onclick="return confirm('ยืนยันการลบผู้ใช้ <?= htmlspecialchars($user['name'], ENT_QUOTES) ?> ?');">ลบ</a>
-                                                    <?php endif; ?>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>ชื่อ<br>username</th>
+                                    <th>ตำแหน่ง/หน่วยงาน</th>
+                                    <th>สิทธิ์</th>
+                                    <th>สถานะ</th>
+                                    <th>การจัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($users as $index => $user): ?>
+                                    <tr>
+                                        <td><?= $index + 1 ?></td>
+                                        <td><?= htmlspecialchars($user['name']) ?><br><font color="green"><?= htmlspecialchars($user['username']) ?></font></td>
+                                        <td><?= htmlspecialchars($user['position']) ?><br><?= htmlspecialchars($user['department']) ?><br><span class="text-primary">🏛️ <?= htmlspecialchars($user['agency_name'] ?: 'ไม่ระบุหน่วยงาน') ?></span></td>
+                                        <td><?= htmlspecialchars(roleLabel($user['role'])) ?></td>
+                                        <td><?= htmlspecialchars($user['status']) ?></td>
+                                        <td>
+                                            <a class="btn btn-sm btn-outline-primary" href="javascript:void(0)" onclick="openUserModal(<?= (int)$user['id'] ?>)">แก้ไข</a>
+                                            <a class="btn btn-sm btn-outline-secondary" href="users.php?action=toggle_status&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>">
+                                                <?= $user['status'] === 'active' ? 'ระงับ' : 'เปิดใช้งาน' ?>
+                                            </a>
+                                            <?php if ($isManageAll && (int)$user['id'] !== $currentUserId): ?>
+                                                <a class="btn btn-sm btn-outline-danger" href="users.php?action=delete&id=<?= $user['id'] ?>&csrf=<?= urlencode(csrfToken()) ?>" onclick="return confirm('ยืนยันการลบผู้ใช้ <?= htmlspecialchars($user['name'], ENT_QUOTES) ?> ?');">ลบ</a>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-
-                <div class="col-12 col-xl-5">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <h2 class="h5 fw-bold mb-3"><?= $editingUser ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้ใหม่' ?></h2>
-                            <form method="post">
-                                <input type="hidden" name="user_id" value="<?= $editingUser ? intval($editingUser['id']) : 0 ?>">
-                                <?= csrfField() ?>
-                                <div class="mb-3">
-                                    <input class="form-control" type="text" placeholder="ชื่อผู้ใช้ เช่น guest" name="username" value="<?= htmlspecialchars(isset($editingUser['username']) ? $editingUser['username'] : '') ?>" required>
-                                </div>
-                                <div class="mb-3">
-                                    <input class="form-control" type="text" placeholder="คำนำหน้า-ชื่อ-นามสกุล" name="name" value="<?= htmlspecialchars(isset($editingUser['name']) ? $editingUser['name'] : '') ?>" required>
-                                </div>
-                                <div class="mb-3">
-                                    <input class="form-control" type="text" placeholder="ตำแหน่ง" name="position" value="<?= htmlspecialchars(isset($editingUser['position']) ? $editingUser['position'] : '') ?>">
-                                </div>
-                                <div class="mb-3">
-                                    <input class="form-control" type="text" placeholder="หน่วยงาน" name="department" value="<?= htmlspecialchars(isset($editingUser['department']) ? $editingUser['department'] : '') ?>">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">หน่วยงานการศึกษา (สังกัด) <span class="text-danger">*</span></label>
-                                    <?php if ($isOfficeUser): ?>
-                                        <?php
-                                        $lockedAgencyName = '';
-                                        foreach ($agencies as $agency) {
-                                            if ((int)$agency['id'] === $myAgencyId) {
-                                                $lockedAgencyName = $agency['agency_name'] . ' (' . $agency['agency_code'] . ')';
-                                                break;
-                                            }
-                                        }
-                                        ?>
-                                        <input type="hidden" name="agency_id" value="<?= (int)$myAgencyId ?>">
-                                        <input class="form-control" type="text" value="<?= htmlspecialchars($lockedAgencyName) ?>" readonly>
-                                        <div class="form-text">หน่วยงานถูกล็อกตามสิทธิ์ของคุณ ไม่สามารถเปลี่ยนได้</div>
-                                    <?php else: ?>
-                                        <select class="form-select" name="agency_id" required>
-                                            <option value="">-- เลือกหน่วยงานการศึกษา --</option>
-                                            <?php foreach ($agencies as $agency): ?>
-                                                <option value="<?= (int)$agency['id'] ?>" <?= (isset($editingUser['agency_id']) && (int)$editingUser['agency_id'] === (int)$agency['id']) ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($agency['agency_name'] . ' (' . $agency['agency_code'] . ')') ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">บทบาท</label>
-                                    <?php if ($isOfficeUser): ?>
-                                        <input type="hidden" name="role" value="user">
-                                        <input class="form-control" type="text" value="<?= htmlspecialchars(roleLabel('user')) ?>" readonly>
-                                        <div class="form-text">ผู้ประสานงานหน่วยงานกำหนดบทบาทได้เฉพาะผู้ใช้ทั่วไป (user)</div>
-                                    <?php else: ?>
-                                        <select class="form-select" name="role">
-                                            <option value="user" <?= isset($editingUser['role']) && $editingUser['role'] === 'user' ? 'selected' : '' ?>>ผู้ใช้ทั่วไป (user) — เพิ่ม/แก้ไข/รายงานโครงการของตนเองเท่านั้น</option>
-                                            <option value="office" <?= isset($editingUser['role']) && $editingUser['role'] === 'office' ? 'selected' : '' ?>>ผู้ประสานงานหน่วยงาน (office) — เพิ่ม/แก้ไข/รายงานโครงการของหน่วยงานตนเองได้</option>
-                                            <option value="plan" <?= isset($editingUser['role']) && $editingUser['role'] === 'plan' ? 'selected' : '' ?>>ผู้กำหนดตัวชี้วัด KPI (plan) — กำหนดตัวชี้วัดร่วมสำหรับจังหวัด/หน่วยงาน</option>
-                                            <option value="admin" <?= isset($editingUser['role']) && $editingUser['role'] === 'admin' ? 'selected' : '' ?>>ผู้ดูแลระบบ (admin) — เข้าถึงทุกอย่าง</option>
-                                        </select>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">สถานะ</label>
-                                    <select class="form-select" name="status">
-                                        <option value="active" <?= isset($editingUser['status']) && $editingUser['status'] === 'active' ? 'selected' : '' ?>>Active</option>
-                                        <option value="inactive" <?= isset($editingUser['status']) && $editingUser['status'] === 'inactive' ? 'selected' : '' ?>>Inactive</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">รหัสผ่าน<?= $editingUser ? ' (ถ้าต้องการเปลี่ยน)' : '' ?></label>
-                                    <input class="form-control" type="password" name="password" <?= $editingUser ? '' : 'required' ?>>
-                                </div>
-                                <button class="btn btn-primary w-100" type="submit" name="save_user">บันทึกข้อมูล</button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <?php if ($action === 'reset' && $userId > 0): ?>
-                        <div class="card border-0 shadow-sm mt-4">
-                            <div class="card-body">
-                                <h2 class="h5 fw-bold mb-3">รีเซ็ตรหัสผ่าน</h2>
-                                <form method="post" action="users.php?action=reset&id=<?= $userId ?>">
-                                    <?= csrfField() ?>
-                                    <div class="mb-3">
-                                        <label class="form-label">รหัสผ่านใหม่</label>
-                                        <input class="form-control" type="password" name="new_password" required>
-                                    </div>
-                                    <button class="btn btn-warning w-100" type="submit" name="reset_password">รีเซ็ต</button>
-                                </form>
-                            </div>
-                        </div>
-                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </main>
 </div>
+
+<!-- ===== Modal: เพิ่ม/แก้ไขผู้ใช้ (popup) ===== -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="userForm" onsubmit="return saveUser(event)">
+                <input type="hidden" name="user_id" id="userId" value="0">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrfToken()) ?>">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="userModalTitle">➕ เพิ่มผู้ใช้ใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger py-2 d-none" id="userModalError"></div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">ชื่อผู้ใช้ <span class="text-danger">*</span></label>
+                            <input class="form-control" type="text" name="username" id="userUsername" placeholder="เช่น guest" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">คำนำหน้า-ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                            <input class="form-control" type="text" name="name" id="userName" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">ตำแหน่ง</label>
+                            <input class="form-control" type="text" name="position" id="userPosition">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">หน่วยงาน (แผนก)</label>
+                            <input class="form-control" type="text" name="department" id="userDepartment">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">หน่วยงานการศึกษา (สังกัด) <span class="text-danger">*</span></label>
+                            <?php if ($isOfficeUser): ?>
+                                <input type="hidden" name="agency_id" id="userAgencyId" value="<?= (int)$myAgencyId ?>">
+                                <input class="form-control" type="text" id="userAgencyLocked" value="<?= htmlspecialchars($lockedAgencyName) ?>" readonly>
+                                <div class="form-text">หน่วยงานถูกล็อกตามสิทธิ์ของคุณ ไม่สามารถเปลี่ยนได้</div>
+                            <?php else: ?>
+                                <select class="form-select" name="agency_id" id="userAgencyId" required>
+                                    <option value="">-- เลือกหน่วยงานการศึกษา --</option>
+                                    <?php foreach ($agencies as $agency): ?>
+                                        <option value="<?= (int)$agency['id'] ?>">
+                                            <?= htmlspecialchars($agency['agency_name'] . ' (' . $agency['agency_code'] . ')') ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">บทบาท</label>
+                            <?php if ($isOfficeUser): ?>
+                                <input type="hidden" name="role" id="userRole" value="user">
+                                <input class="form-control" type="text" id="userRoleLocked" value="<?= htmlspecialchars(roleLabel('user')) ?>" readonly>
+                                <div class="form-text">ผู้ประสานงานหน่วยงานกำหนดบทบาทได้เฉพาะผู้ใช้ทั่วไป (user)</div>
+                            <?php else: ?>
+                                <select class="form-select" name="role" id="userRole">
+                                    <option value="user">ผู้ใช้ทั่วไป (user) — เพิ่ม/แก้ไข/รายงานโครงการของตนเองเท่านั้น</option>
+                                    <option value="office">ผู้ประสานงานหน่วยงาน (office) — เพิ่ม/แก้ไข/รายงานโครงการของหน่วยงานตนเองได้</option>
+                                    <option value="plan">ผู้กำหนดตัวชี้วัด KPI (plan) — กำหนดตัวชี้วัดร่วมสำหรับจังหวัด/หน่วยงาน</option>
+                                    <option value="admin">ผู้ดูแลระบบ (admin) — เข้าถึงทุกอย่าง</option>
+                                </select>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">สถานะ</label>
+                            <select class="form-select" name="status" id="userStatus">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" id="userPasswordLabel">รหัสผ่าน <span class="text-danger">*</span></label>
+                            <input class="form-control" type="password" name="password" id="userPassword" autocomplete="new-password" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary" id="userSaveBtn">💾 บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ===== Modal เพิ่ม/แก้ไขผู้ใช้ (popup) =====
+var userModalEl = document.getElementById('userModal');
+var isOfficeUser = <?= $isOfficeUser ? 'true' : 'false' ?>;
+
+function openUserModal(id) {
+    const form = document.getElementById('userForm');
+    form.reset();
+    document.getElementById('userId').value = id || 0;
+    document.getElementById('userModalError').classList.add('d-none');
+    document.getElementById('userSaveBtn').disabled = false;
+    document.getElementById('userPassword').required = true;
+    document.getElementById('userPasswordLabel').innerHTML = 'รหัสผ่าน <span class="text-danger">*</span>';
+    document.getElementById('userModalTitle').textContent = '➕ เพิ่มผู้ใช้ใหม่';
+    if (isOfficeUser) {
+        document.getElementById('userAgencyId').value = '<?= (int)$myAgencyId ?>';
+        document.getElementById('userRole').value = 'user';
+    }
+    if (id) {
+        document.getElementById('userModalTitle').textContent = '✏️ แก้ไขผู้ใช้';
+        document.getElementById('userPassword').required = false;
+        document.getElementById('userPasswordLabel').innerHTML = 'รหัสผ่าน <span class="text-muted">(ถ้าต้องการเปลี่ยน)</span>';
+        fetch('users.php?ajax=user&id=' + encodeURIComponent(id))
+            .then(function (r) { return r.json(); })
+            .then(function (u) {
+                if (!u || u.error || !u.id) {
+                    document.getElementById('userModalError').textContent = (u && u.error) ? u.error : 'ไม่พบข้อมูลผู้ใช้';
+                    document.getElementById('userModalError').classList.remove('d-none');
+                    return;
+                }
+                document.getElementById('userId').value = u.id;
+                document.getElementById('userUsername').value = u.username || '';
+                document.getElementById('userName').value = u.name || '';
+                document.getElementById('userPosition').value = u.position || '';
+                document.getElementById('userDepartment').value = u.department || '';
+                if (!isOfficeUser) {
+                    document.getElementById('userAgencyId').value = u.agency_id || '';
+                    document.getElementById('userRole').value = u.role || 'user';
+                }
+                document.getElementById('userStatus').value = u.status || 'active';
+            })
+            .catch(function () {
+                document.getElementById('userModalError').textContent = 'โหลดข้อมูลไม่สำเร็จ';
+                document.getElementById('userModalError').classList.remove('d-none');
+            });
+    }
+    var modal = bootstrap.Modal.getOrCreateInstance(userModalEl);
+    modal.show();
+}
+
+function saveUser(event) {
+    event.preventDefault();
+    const form = document.getElementById('userForm');
+    const errBox = document.getElementById('userModalError');
+    const btn = document.getElementById('userSaveBtn');
+    errBox.classList.add('d-none');
+    btn.disabled = true;
+    const fd = new FormData(form);
+    fd.append('save_user', '1');
+    fetch('users.php', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(userModalEl).hide();
+                location.reload();
+            } else {
+                errBox.textContent = (res && res.error) ? res.error : 'บันทึกไม่สำเร็จ';
+                errBox.classList.remove('d-none');
+                btn.disabled = false;
+            }
+        })
+        .catch(function () {
+            errBox.textContent = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
+            errBox.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    return false;
+}
+</script>
 </body>
 </html>
