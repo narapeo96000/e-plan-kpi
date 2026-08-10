@@ -2,6 +2,11 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-08-10 — ขยาย popup เพิ่ม/แก้ไขผู้ใช้ (modal-xl) ให้พอดีกับหน้าเว็บ
+- `users.php`: เปลี่ยน modal จาก `modal-lg` เป็น `modal-xl` + ปรับฟอร์มเป็น 3 คอลัมน์ (col-xl-4) บนจอใหญ่ ใช้พื้นที่ได้เต็ม; ย่อข้อความตัวเลือกบทบาทให้กระชับ
+- ทดสอบบน server: admin เห็น modal-xl + role options ครบ 4, office เห็น modal-xl + role {user, office} + หน่วยงานล็อก, AJAX create/edit/load ทำงานปกติ; ลบ test user แล้ว DB กลับ 28/2/1/25/0
+- Deploy ขึ้น server แล้ว: `users.php`
+
 ## 2026-08-10 — office ไม่เห็นเมนู "ตั้งค่าระบบ"
 - `menu.php`: เมนู "ตั้งค่าระบบ" (sidebar + mobile nav) แสดงเฉพาะ admin/plan (`isAdminOrPlan()`) — office/user ไม่เห็น
 - ทดสอบบน server: office (nara1) ไม่เห็นเมนูตั้งค่าระบบ, admin (wirat) เห็น

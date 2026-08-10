@@ -431,7 +431,7 @@ if ($isOfficeUser) {
 
 <!-- ===== Modal: เพิ่ม/แก้ไขผู้ใช้ (popup) ===== -->
 <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <form id="userForm" onsubmit="return saveUser(event)">
                 <input type="hidden" name="user_id" id="userId" value="0">
@@ -443,21 +443,45 @@ if ($isOfficeUser) {
                 <div class="modal-body">
                     <div class="alert alert-danger py-2 d-none" id="userModalError"></div>
                     <div class="row g-3">
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 col-xl-4">
                             <label class="form-label">ชื่อผู้ใช้ <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="username" id="userUsername" placeholder="เช่น guest" required>
                         </div>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 col-xl-4">
                             <label class="form-label">คำนำหน้า-ชื่อ-นามสกุล <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="name" id="userName" required>
                         </div>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 col-xl-4">
                             <label class="form-label">ตำแหน่ง</label>
                             <input class="form-control" type="text" name="position" id="userPosition">
                         </div>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 col-xl-4">
                             <label class="form-label">หน่วยงาน (แผนก)</label>
                             <input class="form-control" type="text" name="department" id="userDepartment">
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <label class="form-label">บทบาท</label>
+                            <?php if ($isOfficeUser): ?>
+                                <select class="form-select" name="role" id="userRole">
+                                    <option value="user">ผู้ใช้ทั่วไป (user)</option>
+                                    <option value="office">ผู้ประสานงานหน่วยงาน (office)</option>
+                                </select>
+                                <div class="form-text">ผู้ประสานงานหน่วยงานกำหนดบทบาทได้เฉพาะผู้ใช้ทั่วไป (user) หรือผู้ประสานงานหน่วยงาน (office)</div>
+                            <?php else: ?>
+                                <select class="form-select" name="role" id="userRole">
+                                    <option value="user">ผู้ใช้ทั่วไป (user)</option>
+                                    <option value="office">ผู้ประสานงานหน่วยงาน (office)</option>
+                                    <option value="plan">ผู้กำหนดตัวชี้วัด KPI (plan)</option>
+                                    <option value="admin">ผู้ดูแลระบบ (admin)</option>
+                                </select>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <label class="form-label">สถานะ</label>
+                            <select class="form-select" name="status" id="userStatus">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
                         </div>
                         <div class="col-12">
                             <label class="form-label">หน่วยงานการศึกษา (สังกัด) <span class="text-danger">*</span></label>
@@ -476,31 +500,7 @@ if ($isOfficeUser) {
                                 </select>
                             <?php endif; ?>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">บทบาท</label>
-                            <?php if ($isOfficeUser): ?>
-                                <select class="form-select" name="role" id="userRole">
-                                    <option value="user">ผู้ใช้ทั่วไป (user) — เพิ่ม/แก้ไข/รายงานโครงการของตนเองเท่านั้น</option>
-                                    <option value="office">ผู้ประสานงานหน่วยงาน (office) — เพิ่ม/แก้ไข/รายงานโครงการของหน่วยงานตนเองได้</option>
-                                </select>
-                                <div class="form-text">ผู้ประสานงานหน่วยงานกำหนดบทบาทได้เฉพาะผู้ใช้ทั่วไป (user) หรือผู้ประสานงานหน่วยงาน (office)</div>
-                            <?php else: ?>
-                                <select class="form-select" name="role" id="userRole">
-                                    <option value="user">ผู้ใช้ทั่วไป (user) — เพิ่ม/แก้ไข/รายงานโครงการของตนเองเท่านั้น</option>
-                                    <option value="office">ผู้ประสานงานหน่วยงาน (office) — เพิ่ม/แก้ไข/รายงานโครงการของหน่วยงานตนเองได้</option>
-                                    <option value="plan">ผู้กำหนดตัวชี้วัด KPI (plan) — กำหนดตัวชี้วัดร่วมสำหรับจังหวัด/หน่วยงาน</option>
-                                    <option value="admin">ผู้ดูแลระบบ (admin) — เข้าถึงทุกอย่าง</option>
-                                </select>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label">สถานะ</label>
-                            <select class="form-select" name="status" id="userStatus">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
+                        <div class="col-12 col-md-6 col-xl-4">
                             <label class="form-label" id="userPasswordLabel">รหัสผ่าน <span class="text-danger">*</span></label>
                             <input class="form-control" type="password" name="password" id="userPassword" autocomplete="new-password" required>
                         </div>
