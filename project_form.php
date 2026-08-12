@@ -488,12 +488,6 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                     </div>
                 </div>
                 <div class="row g-3 mt-2">
-                    <div class="col-12">
-                        <label class="form-label">สรุปผลการดำเนินโครงการ</label>
-                        <textarea name="operation_results" class="form-control" rows="3" placeholder="สรุปผลการดำเนินงานที่ผ่านมา"><?= htmlspecialchars($defaults['operation_results']) ?></textarea>
-                    </div>
-                </div>
-                <div class="row g-3 mt-2">
                     <div class="col-12 col-md-6">
                         <label class="form-label">กิจกรรมที่ดำเนินการ</label>
                         <textarea name="operated_activities" class="form-control" rows="3" placeholder="ระบุกิจกรรมที่ได้ดำเนินการไปแล้ว"><?= htmlspecialchars($defaults['operated_activities']) ?></textarea>
