@@ -161,6 +161,13 @@ if (isset($_GET['download'])) {
         $stmt->execute();
         $res = $stmt->get_result();
         if ($res && $row = $res->fetch_assoc()) {
+            // Increment download counter
+            $updateStmt = $conn->prepare("UPDATE download_docs SET download_count = download_count + 1 WHERE id = ?");
+            if ($updateStmt) {
+                $updateStmt->bind_param('i', $docId);
+                $updateStmt->execute();
+                $updateStmt->close();
+            }
             // Link doc: redirect to the external URL
             if (!empty($row['doc_url'])) {
                 header('Location: ' . $row['doc_url']);
@@ -256,6 +263,7 @@ function docIcon($name) {
                                             <th>#</th>
                                             <th>เอกสาร</th>
                                             <th>ขนาด</th>
+                                            <th class="text-center">ดาวน์โหลด</th>
                                             <?php if (isAdmin()): ?>
                                                 <th>สถานะ</th>
                                             <?php endif; ?>
@@ -264,7 +272,7 @@ function docIcon($name) {
                                     </thead>
                                     <tbody>
                                         <?php if (empty($docs)): ?>
-                                            <tr><td colspan="<?= isAdmin() ? 5 : 4 ?>" class="text-muted text-center py-4">ยังไม่มีเอกสารให้ดาวน์โหลด</td></tr>
+                                            <tr><td colspan="<?= isAdmin() ? 6 : 5 ?>" class="text-muted text-center py-4">ยังไม่มีเอกสารให้ดาวน์โหลด</td></tr>
                                         <?php endif; ?>
                                         <?php foreach ($docs as $index => $doc): ?>
                                             <tr class="<?= $doc['status'] !== 'active' ? 'opacity-50' : '' ?>">
@@ -280,6 +288,7 @@ function docIcon($name) {
                                                     <div class="small text-muted"><?= !empty($doc['doc_url']) ? 'ลิงค์ภายนอก' : htmlspecialchars($doc['original_name']) ?> • <?= htmlspecialchars((string)$doc['uploaded_by']) ?> • <?= htmlspecialchars(date('d/m/Y', strtotime($doc['created_at']))) ?></div>
                                                 </td>
                                                 <td class="text-nowrap"><?= !empty($doc['doc_url']) ? '—' : docSizeLabel($doc['file_size']) ?></td>
+                                                <td class="text-center text-nowrap"><?= number_format((int)$doc['download_count']) ?> ครั้ง</td>
                                                 <?php if (isAdmin()): ?>
                                                     <td>
                                                         <span class="badge <?= $doc['status'] === 'active' ? 'bg-success-subtle text-success-emphasis' : 'bg-secondary-subtle text-secondary-emphasis' ?>">

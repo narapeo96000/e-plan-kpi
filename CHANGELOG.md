@@ -2,6 +2,13 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-08-10 — สถิติจำนวนครั้งดาวน์โหลดเอกสาร (download_docs.php)
+- เพิ่ม column `download_count` INT UNSIGNED DEFAULT 0 ใน `download_docs` (ทั้ง `office_budget_edu_db.sql` สำหรับติดตั้งใหม่ และ `migration_upgrade.sql` สำหรับ DB มีอยู่)
+- `download_docs.php`: เมื่อกดดาวน์โหลด (ไฟล์หรือลิงค์) จะบวก `download_count + 1` ก่อนส่ง/redirect เสมอ
+- แสดงจำนวนครั้งดาวน์โหลดในตาราง "เอกสารดาวน์โหลด" (คอลัมน์ "ดาวน์โหลด")
+- ทดสอบบน server: ดาวน์โหลดเอกสาร id=1 สองครั้ง → แสดง "2 ครั้ง" ถูกต้อง
+- Deploy ขึ้น server แล้ว: `download_docs.php`, `migration_upgrade.sql`
+
 ## 2026-08-10 — ตัดช่อง "สรุปผลการดำเนินโครงการ" ที่ซ้ำออกจาก project_form.php
 - `project_form.php`: ลบ textarea `operation_results` ที่ซ้ำ (ช่องที่ 2) ในหมวด "ผลการดำเนินงาน" เหลือเพียงช่องเดียว
 - ตรวจสอบบน server: project_form.php?id=97 แสดง label "สรุปผลการดำเนินโครงการ" เพียง 1 อัน + textarea 1 อัน

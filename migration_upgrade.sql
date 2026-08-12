@@ -345,6 +345,22 @@ EXECUTE doc_url_stmt;
 DEALLOCATE PREPARE doc_url_stmt;
 
 -- -----------------------------------------------------------------------------
+-- download_docs.download_count: สถิติจำนวนครั้งดาวน์โหลด (สำหรับ DB ที่มีอยู่เดิม)
+-- -----------------------------------------------------------------------------
+SET @dl_count_col_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'download_docs'
+    AND COLUMN_NAME = 'download_count'
+);
+SET @dl_count_col_sql := IF(@dl_count_col_exists = 0,
+  'ALTER TABLE `download_docs` ADD COLUMN `download_count` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `sort_order`',
+  'SELECT 1');
+PREPARE dl_count_stmt FROM @dl_count_col_sql;
+EXECUTE dl_count_stmt;
+DEALLOCATE PREPARE dl_count_stmt;
+
+-- -----------------------------------------------------------------------------
 -- 4) project_strategic_issues: 1-to-many strategy links for projects and OKRs
 -- -----------------------------------------------------------------------------
 
