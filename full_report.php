@@ -89,7 +89,7 @@ if (!empty($projectIds)) {
         FROM project_strategic_issues psi
         JOIN strategic_issues si ON si.id = psi.strategic_issue_id
         WHERE psi.project_id IN ($idList) AND psi.source = 'project'
-        ORDER BY si.sort_order ASC, si.issue_name ASC
+        ORDER BY si.issue_no ASC, si.issue_name ASC
     ");
     if ($res) {
         while ($row = $res->fetch_assoc()) {
