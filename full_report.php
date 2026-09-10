@@ -492,19 +492,19 @@ $statusMap = array(
                                 <?php if (!empty($p['operation_results'])): ?>
                                 <div class="col-12 col-md-4">
                                     <div class="small text-muted mb-1">สรุปผลการดำเนินโครงการ</div>
-                                    <div class="report-text"><?= nl2brEscaped($p['operation_results']) ?></div>
+                                    <div class="report-text ck-content"><?= safeHtml($p['operation_results']) ?></div>
                                 </div>
                                 <?php endif; ?>
                                 <?php if (!empty($p['operated_activities'])): ?>
                                 <div class="col-12 col-md-4">
                                     <div class="small text-muted mb-1">กิจกรรมที่ดำเนินการ</div>
-                                    <div class="report-text"><?= nl2brEscaped($p['operated_activities']) ?></div>
+                                    <div class="report-text ck-content"><?= safeHtml($p['operated_activities']) ?></div>
                                 </div>
                                 <?php endif; ?>
                                 <?php if (!empty($p['problems_suggestions'])): ?>
                                 <div class="col-12 col-md-4">
                                     <div class="small text-muted mb-1">ปัญหาอุปสรรค / ข้อเสนอแนะ</div>
-                                    <div class="report-text"><?= nl2brEscaped($p['problems_suggestions']) ?></div>
+                                    <div class="report-text ck-content"><?= safeHtml($p['problems_suggestions']) ?></div>
                                 </div>
                                 <?php endif; ?>
 

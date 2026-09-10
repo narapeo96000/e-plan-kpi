@@ -2,6 +2,13 @@
 
 บันทึกนี้จะถูกอัปเดตทุกครั้งที่มีการปรับปรุง/แก้ไขระบบ พร้อมวันเวลา (เวลาไทย UTC+7) และรายละเอียดการแก้ไข แล้ว commit + push ขึ้น GitHub
 
+## 2026-09-10 — เปลี่ยน textarea ในฟอร์มโครงการเป็น CKEditor
+- `project_form.php`: เปลี่ยน textarea 7 ช่อง (วัตถุประสงค์, เป้าหมายเชิงปริมาณ, เป้าหมายเชิงคุณภาพ, สรุปผลการดำเนินโครงการ, กิจกรรมที่ดำเนินการ, ปัญหาและข้อเสนอแนะ, สรุปโครงการ) ให้ใช้ CKEditor 4.22.1 (CDN)
+- `style.php`: เพิ่มฟังก์ชัน `safeHtml()` สำหรับกรองแท็ก HTML ที่อนุญาต และเพิ่ม CSS สำหรับ `.ck-content` (paragraph, list, table, blockquote)
+- `pview_project.php`: แสดงผล rich-text โดยใช้ `safeHtml()` แทน `htmlspecialchars()` + `nl2br()`
+- `full_report.php`: แสดงผล rich-text ในรายงานโดยใช้ `safeHtml()` แทน `nl2brEscaped()`
+- Preview ในหน้า `project_form.php`: ซิงค์ CKEditor ก่อนอ่านค่า และแสดงผล HTML อย่างปลอดภัยผ่าน `safeHtmlJs()`
+
 ## 2026-08-10 — สถิติจำนวนครั้งดาวน์โหลดเอกสาร (download_docs.php)
 - เพิ่ม column `download_count` INT UNSIGNED DEFAULT 0 ใน `download_docs` (ทั้ง `office_budget_edu_db.sql` สำหรับติดตั้งใหม่ และ `migration_upgrade.sql` สำหรับ DB มีอยู่)
 - `download_docs.php`: เมื่อกดดาวน์โหลด (ไฟล์หรือลิงค์) จะบวก `download_count + 1` ก่อนส่ง/redirect เสมอ

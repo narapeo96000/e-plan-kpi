@@ -217,6 +217,7 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
     <?php include __DIR__ . '/style.php'; ?>
 </head>
 <body>
@@ -461,17 +462,17 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label">วัตถุประสงค์โครงการ</label>
-                        <textarea name="objectives" class="form-control" rows="3" placeholder="ระบุวัตถุประสงค์ของโครงการ"><?= htmlspecialchars($defaults['objectives']) ?></textarea>
+                        <textarea name="objectives" class="form-control ckeditor" rows="3" placeholder="ระบุวัตถุประสงค์ของโครงการ"><?= htmlspecialchars_decode($defaults['objectives'], ENT_QUOTES) ?></textarea>
                     </div>
                 </div>
                 <div class="row g-3 mt-2">
                     <div class="col-12 col-md-6">
                         <label class="form-label">เป้าหมายเชิงปริมาณ</label>
-                        <textarea name="target_quantitative" class="form-control" rows="3" placeholder="เช่น จำนวนผู้เข้าร่วม จำนวนครั้ง ฯลฯ"><?= htmlspecialchars($defaults['target_quantitative']) ?></textarea>
+                        <textarea name="target_quantitative" class="form-control ckeditor" rows="3" placeholder="เช่น จำนวนผู้เข้าร่วม จำนวนครั้ง ฯลฯ"><?= htmlspecialchars_decode($defaults['target_quantitative'], ENT_QUOTES) ?></textarea>
                     </div>
                     <div class="col-12 col-md-6">
                         <label class="form-label">เป้าหมายเชิงคุณภาพ</label>
-                        <textarea name="target_qualitative" class="form-control" rows="3" placeholder="เช่น ระดับความพึงพอใจ คุณภาพผลงาน ฯลฯ"><?= htmlspecialchars($defaults['target_qualitative']) ?></textarea>
+                        <textarea name="target_qualitative" class="form-control ckeditor" rows="3" placeholder="เช่น ระดับความพึงพอใจ คุณภาพผลงาน ฯลฯ"><?= htmlspecialchars_decode($defaults['target_qualitative'], ENT_QUOTES) ?></textarea>
                     </div>
                 </div>
             </div>
@@ -484,23 +485,23 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label">สรุปผลการดำเนินโครงการ</label>
-                        <textarea name="operation_results" class="form-control" rows="3" placeholder="สรุปผลการดำเนินงานที่ผ่านมา"><?= htmlspecialchars($defaults['operation_results']) ?></textarea>
+                        <textarea name="operation_results" class="form-control ckeditor" rows="3" placeholder="สรุปผลการดำเนินงานที่ผ่านมา"><?= htmlspecialchars_decode($defaults['operation_results'], ENT_QUOTES) ?></textarea>
                     </div>
                 </div>
                 <div class="row g-3 mt-2">
                     <div class="col-12 col-md-6">
                         <label class="form-label">กิจกรรมที่ดำเนินการ</label>
-                        <textarea name="operated_activities" class="form-control" rows="3" placeholder="ระบุกิจกรรมที่ได้ดำเนินการไปแล้ว"><?= htmlspecialchars($defaults['operated_activities']) ?></textarea>
+                        <textarea name="operated_activities" class="form-control ckeditor" rows="3" placeholder="ระบุกิจกรรมที่ได้ดำเนินการไปแล้ว"><?= htmlspecialchars_decode($defaults['operated_activities'], ENT_QUOTES) ?></textarea>
                     </div>
                     <div class="col-12 col-md-6">
                         <label class="form-label">ปัญหาและข้อเสนอแนะ</label>
-                        <textarea name="problems_suggestions" class="form-control" rows="3" placeholder="ปัญหาที่พบและข้อเสนอแนะ"><?= htmlspecialchars($defaults['problems_suggestions']) ?></textarea>
+                        <textarea name="problems_suggestions" class="form-control ckeditor" rows="3" placeholder="ปัญหาที่พบและข้อเสนอแนะ"><?= htmlspecialchars_decode($defaults['problems_suggestions'], ENT_QUOTES) ?></textarea>
                     </div>
                 </div>
                 <div class="row g-3 mt-2">
                     <div class="col-12">
                         <label class="form-label">สรุปโครงการ</label>
-                        <textarea name="summary" class="form-control" rows="3" placeholder="สรุปภาพรวมโครงการ"><?= htmlspecialchars($defaults['summary']) ?></textarea>
+                        <textarea name="summary" class="form-control ckeditor" rows="3" placeholder="สรุปภาพรวมโครงการ"><?= htmlspecialchars_decode($defaults['summary'], ENT_QUOTES) ?></textarea>
                     </div>
                 </div>
             </div>
@@ -786,6 +787,14 @@ function toggleBudgetSourceInput(select) {
 
 // ===== Preview =====
 function getFormData() {
+    // Sync CKEditor content back to underlying textareas before collecting
+    if (typeof CKEDITOR !== 'undefined') {
+        for (var name in CKEDITOR.instances) {
+            if (CKEDITOR.instances.hasOwnProperty(name)) {
+                CKEDITOR.instances[name].updateElement();
+            }
+        }
+    }
     const form = document.getElementById('projectForm');
     const fd = new FormData(form);
     const data = {};
@@ -833,18 +842,18 @@ function showPreview() {
 
     // Section 3
     html += '<div class="col-12"><h6 class="fw-bold text-info">📝 รายละเอียดโครงการ</h6><table class="table table-bordered table-sm">';
-    html += '<tr><td style="width:200px">วัตถุประสงค์</td><td style="white-space:pre-wrap">' + esc(d.objectives || '-') + '</td></tr>';
-    html += '<tr><td>เป้าหมายเชิงปริมาณ</td><td style="white-space:pre-wrap">' + esc(d.target_quantitative || '-') + '</td></tr>';
-    html += '<tr><td>เป้าหมายเชิงคุณภาพ</td><td style="white-space:pre-wrap">' + esc(d.target_qualitative || '-') + '</td></tr>';
+    html += '<tr><td style="width:200px">วัตถุประสงค์</td><td>' + safeHtmlJs(d.objectives || '-') + '</td></tr>';
+    html += '<tr><td>เป้าหมายเชิงปริมาณ</td><td>' + safeHtmlJs(d.target_quantitative || '-') + '</td></tr>';
+    html += '<tr><td>เป้าหมายเชิงคุณภาพ</td><td>' + safeHtmlJs(d.target_qualitative || '-') + '</td></tr>';
     html += '</table></div>';
 
     // Section 4
     html += '<div class="col-12"><h6 class="fw-bold text-warning">📝 ผลการดำเนินงาน</h6><table class="table table-bordered table-sm">';
     html += '<tr><td style="width:200px">ผลการดำเนินโครงการ</td><td>' + esc(getResultStatusText()) + '</td></tr>';
-    html += '<tr><td style="width:200px">สรุปผลการดำเนินโครงการ</td><td style="white-space:pre-wrap">' + esc(d.operation_results || '-') + '</td></tr>';
-    html += '<tr><td>กิจกรรมที่ดำเนินการ</td><td style="white-space:pre-wrap">' + esc(d.operated_activities || '-') + '</td></tr>';
-    html += '<tr><td>ปัญหาและข้อเสนอแนะ</td><td style="white-space:pre-wrap">' + esc(d.problems_suggestions || '-') + '</td></tr>';
-    html += '<tr><td>สรุปโครงการ</td><td style="white-space:pre-wrap">' + esc(d.summary || '-') + '</td></tr>';
+    html += '<tr><td style="width:200px">สรุปผลการดำเนินโครงการ</td><td>' + safeHtmlJs(d.operation_results || '-') + '</td></tr>';
+    html += '<tr><td>กิจกรรมที่ดำเนินการ</td><td>' + safeHtmlJs(d.operated_activities || '-') + '</td></tr>';
+    html += '<tr><td>ปัญหาและข้อเสนอแนะ</td><td>' + safeHtmlJs(d.problems_suggestions || '-') + '</td></tr>';
+    html += '<tr><td>สรุปโครงการ</td><td>' + safeHtmlJs(d.summary || '-') + '</td></tr>';
     html += '</table></div>';
 
     // Section 5
@@ -874,6 +883,31 @@ function showPreview() {
 function esc(s) {
     const div = document.createElement('div');
     div.textContent = s;
+    return div.innerHTML;
+}
+
+function safeHtmlJs(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    // Remove script tags
+    const scripts = div.querySelectorAll('script');
+    scripts.forEach(function (el) { el.remove(); });
+    // Remove event handlers and dangerous URLs
+    const all = div.querySelectorAll('*');
+    all.forEach(function (el) {
+        for (var i = el.attributes.length - 1; i >= 0; i--) {
+            const attr = el.attributes[i].name;
+            if (attr.indexOf('on') === 0) {
+                el.removeAttribute(attr);
+            }
+        }
+        if (el.tagName === 'A') {
+            const href = el.getAttribute('href') || '';
+            if (/^javascript:/i.test(href)) {
+                el.setAttribute('href', '#');
+            }
+        }
+    });
     return div.innerHTML;
 }
 
@@ -964,6 +998,27 @@ function submitForm() {
 
 // Auto-trigger initial calc
 autoCalcProgress();
+
+// Initialize CKEditor on rich-text textareas
+var ckFields = ['objectives', 'target_quantitative', 'target_qualitative', 'operation_results', 'operated_activities', 'problems_suggestions', 'summary'];
+ckFields.forEach(function (name) {
+    var el = document.querySelector('textarea[name="' + name + '"]');
+    if (el && typeof CKEDITOR !== 'undefined') {
+        CKEDITOR.replace(el, {
+            height: 120,
+            toolbar: [
+                { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript'] },
+                { name: 'paragraph', items: ['NumberedList', 'BulletedList', 'Blockquote'] },
+                { name: 'styles', items: ['Format'] },
+                { name: 'links', items: ['Link', 'Unlink'] },
+                { name: 'insert', items: ['Image', 'Table', 'HorizontalRule'] },
+                { name: 'tools', items: ['Maximize', 'Source'] }
+            ],
+            removePlugins: 'elementspath',
+            resize_enabled: true
+        });
+    }
+});
 </script>
 </body>
 </html>

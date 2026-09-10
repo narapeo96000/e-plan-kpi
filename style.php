@@ -2,6 +2,16 @@
 // Shared styling for all pages
 $theme_primary = isset($theme_primary) ? $theme_primary : '#2563eb';
 $theme_secondary = isset($theme_secondary) ? $theme_secondary : '#0ea5e9';
+
+if (!function_exists('safeHtml')) {
+    function safeHtml($text) {
+        $text = trim((string)$text);
+        if ($text === '') return '';
+        $allowed = '<p><br><strong><b><em><i><u><ul><ol><li><h1><h2><h3><h4><h5><h6><blockquote><a><img><table><thead><tbody><tr><td><th><span><div><hr><sub><sup><pre><code><s><strike>';
+        $text = strip_tags($text, $allowed);
+        return $text;
+    }
+}
 ?>
 <style>
     :root {
@@ -903,4 +913,14 @@ $theme_secondary = isset($theme_secondary) ? $theme_secondary : '#0ea5e9';
             padding: 1rem !important;
         }
     }
+
+    /* ===== CKEditor rendered content ===== */
+    .ck-content p { margin-bottom: 0.5rem; }
+    .ck-content ul, .ck-content ol { margin-bottom: 0.5rem; padding-left: 1.5rem; }
+    .ck-content ul { list-style-type: disc; }
+    .ck-content ol { list-style-type: decimal; }
+    .ck-content li { margin-bottom: 0.25rem; }
+    .ck-content table { width: 100%; border-collapse: collapse; margin-bottom: 0.5rem; }
+    .ck-content table th, .ck-content table td { border: 1px solid #dee2e6; padding: 0.375rem; }
+    .ck-content blockquote { border-left: 3px solid #cbd5e1; padding-left: 1rem; color: #475569; }
 </style>

@@ -300,24 +300,24 @@ if (!$fromOkr) {
             <div class="col-12">
               <div class="border rounded-3 p-3">
                 <div class="text-muted small mb-1">สรุปผลการดำเนินโครงการ</div>
-                <div class="mt-2 text-dark" style="white-space: pre-wrap;">
-                  <?= nl2br(htmlspecialchars($project['overall_result'] ?: '-')) ?>
+                <div class="mt-2 text-dark ck-content">
+                  <?= !empty($project['overall_result']) ? safeHtml($project['overall_result']) : '-' ?>
                 </div>
               </div>
             </div>
             <div class="col-12">
               <div class="border rounded-3 p-3">
                 <div class="text-muted small mb-1">กิจกรรมที่ดำเนิน</div>
-                <div class="mt-2 text-dark" style="white-space: pre-wrap;">
-                  <?= nl2br(htmlspecialchars($project['activities_summary'] ?: '-')) ?>
+                <div class="mt-2 text-dark ck-content">
+                  <?= !empty($project['activities_summary']) ? safeHtml($project['activities_summary']) : '-' ?>
                 </div>
               </div>
             </div>
             <div class="col-12">
               <div class="border rounded-3 p-3">
                 <div class="text-muted small mb-1">ปัญหา / อุปสรรค / ข้อเสนอแนะ</div>
-                <div class="mt-2 text-dark" style="white-space: pre-wrap;">
-                  <?= nl2br(htmlspecialchars($project['issues_summary'] ?: '-')) ?>
+                <div class="mt-2 text-dark ck-content">
+                  <?= !empty($project['issues_summary']) ? safeHtml($project['issues_summary']) : '-' ?>
                 </div>
               </div>
             </div>
