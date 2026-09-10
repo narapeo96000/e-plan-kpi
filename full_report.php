@@ -458,35 +458,37 @@ $statusMap = array(
                                     </div>
                                 </div>
 
-                                <!-- ยุทธศาสตร์ / ตัวชี้วัด / OKR -->
-                                <?php if (!empty($strategies) || !empty($kpis) || $okr !== ''): ?>
+                                <!-- ยุทธศาสตร์ / ตัวชี้วัด / OKR (แสดงทุกโครงการ) -->
                                 <div class="col-12">
-                                    <?php if (!empty($strategies)): ?>
-                                        <div class="mb-2">
-                                            <span class="small text-muted">ยุทธศาสตร์:</span>
+                                    <div class="mb-2">
+                                        <span class="small text-muted">ยุทธศาสตร์:</span>
+                                        <?php if (!empty($strategies)): ?>
                                             <?php foreach ($strategies as $s): ?>
                                                 <span class="badge bg-light text-dark border me-1"><?= htmlspecialchars($s) ?></span>
                                             <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($kpis)): ?>
-                                        <div class="mb-2">
-                                            <span class="small text-muted">ตัวชี้วัด:</span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="small text-muted">ตัวชี้วัด:</span>
+                                        <?php if (!empty($kpis)): ?>
                                             <ul class="d-inline list-inline mb-0">
                                                 <?php foreach ($kpis as $k): ?>
                                                     <li class="list-inline-item"><span class="badge bg-light text-dark border"><?= htmlspecialchars($k) ?></span></li>
                                                 <?php endforeach; ?>
                                             </ul>
-                                        </div>
-                                    <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </div>
                                     <?php if ($okr !== ''): ?>
-                                        <div>
-                                            <span class="small text-muted">OKR:</span>
-                                            <span><?= nl2brEscaped($okr) ?></span>
-                                        </div>
+                                    <div>
+                                        <span class="small text-muted">OKR:</span>
+                                        <span><?= safeHtml($okr) ?></span>
+                                    </div>
                                     <?php endif; ?>
                                 </div>
-                                <?php endif; ?>
 
                                 <!-- สรุปผล / กิจกรรม / ปัญหา -->
                                 <?php if (!empty($p['operation_results'])): ?>
