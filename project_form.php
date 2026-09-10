@@ -640,7 +640,7 @@ function checked($a, $b) { return (int)$a === (int)$b ? 'checked' : ''; }
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-info text-white" onclick="showPreview()">👁️ Preview</button>
-                        <button type="submit" class="btn btn-success"><?= $isEdit ? '💾 บันทึกการแก้ไข' : '💾 บันทึกโครงการ' ?></button>
+                        <button type="button" class="btn btn-success" onclick="submitForm()"><?= $isEdit ? '💾 บันทึกการแก้ไข' : '💾 บันทึกโครงการ' ?></button>
                         <a class="btn btn-outline-secondary" href="projects.php">ยกเลิก</a>
                     </div>
                 </div>
@@ -996,7 +996,15 @@ function hasStrategySelected() {
 }
 
 function submitForm() {
+    const stratBox = document.querySelector('input[name="strategic_issues[]"]');
+    if (stratBox) {
+        stratBox.closest('.border').classList.remove('border-danger');
+    }
     if (!hasStrategySelected()) {
+        if (stratBox) {
+            stratBox.closest('.border').classList.add('border-danger');
+            stratBox.closest('.border').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         alert('กรุณาเลือกยุทธศาสตร์อย่างน้อย 1 ยุทธศาสตร์');
         return;
     }
