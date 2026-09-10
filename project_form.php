@@ -1006,6 +1006,7 @@ ckFields.forEach(function (name) {
     if (el && typeof CKEDITOR !== 'undefined') {
         CKEDITOR.replace(el, {
             height: 120,
+            versionCheck: false,
             toolbar: [
                 { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript'] },
                 { name: 'paragraph', items: ['NumberedList', 'BulletedList', 'Blockquote'] },
