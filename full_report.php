@@ -65,6 +65,7 @@ if ($res) {
 
 // All projects detail
 $projects = array();
+$projectIds = array();
 $res = $conn->query("
     SELECT p.*, a.agency_name AS school_name
     FROM projects p
@@ -72,7 +73,92 @@ $res = $conn->query("
     WHERE p.fiscal_year = '$escapedYear'
 " . $agencyScope . " ORDER BY a.sort_order ASC, a.agency_name ASC, p.title ASC");
 if ($res) {
-    while ($row = $res->fetch_assoc()) $projects[] = $row;
+    while ($row = $res->fetch_assoc()) {
+        $projects[] = $row;
+        $projectIds[] = (int)$row['id'];
+    }
+}
+
+// Strategies per project
+$projectStrategies = array();
+if (!empty($projectIds)) {
+    $idList = implode(',', $projectIds);
+    $res = $conn->query("
+        SELECT psi.project_id, si.issue_name
+        FROM project_strategic_issues psi
+        JOIN strategic_issues si ON si.id = psi.strategic_issue_id
+        WHERE psi.project_id IN ($idList) AND psi.source = 'project'
+        ORDER BY si.sort_order ASC, si.issue_name ASC
+    ");
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $pid = (int)$row['project_id'];
+            if (!isset($projectStrategies[$pid])) $projectStrategies[$pid] = array();
+            $projectStrategies[$pid][] = $row['issue_name'];
+        }
+    }
+}
+
+// KPIs per project
+$projectKpis = array();
+if (!empty($projectIds)) {
+    $idList = implode(',', $projectIds);
+    $res = $conn->query("
+        SELECT pk.project_id, k.kpi_name
+        FROM project_kpis pk
+        JOIN kpi_definitions k ON k.id = pk.kpi_id
+        WHERE pk.project_id IN ($idList)
+        ORDER BY k.kpi_name ASC
+    ");
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $pid = (int)$row['project_id'];
+            if (!isset($projectKpis[$pid])) $projectKpis[$pid] = array();
+            $projectKpis[$pid][] = $row['kpi_name'];
+        }
+    }
+}
+
+// OKR per project (match by project_code or title)
+$projectOkrs = array();
+if (!empty($projects)) {
+    foreach ($projects as $p) {
+        $pid = (int)$p['id'];
+        $code = $conn->real_escape_string($p['project_id']);
+        $title = $conn->real_escape_string($p['title']);
+        $res = $conn->query("
+            SELECT objective_text
+            FROM okr_projects
+            WHERE fiscal_year = '$escapedYear'
+              AND (project_code = '$code' OR title = '$title')
+            LIMIT 1
+        ");
+        if ($res && $row = $res->fetch_assoc()) {
+            $projectOkrs[$pid] = $row['objective_text'];
+        }
+    }
+}
+
+function linesToLinks($text) {
+    $text = trim($text);
+    if ($text === '') return '';
+    $lines = array_filter(array_map('trim', explode("\n", $text)), function($l){ return $l !== ''; });
+    if (empty($lines)) return '';
+    $out = '<ul class="list-unstyled mb-0">';
+    foreach ($lines as $line) {
+        if (filter_var($line, FILTER_VALIDATE_URL)) {
+            $out .= '<li><a href="' . htmlspecialchars($line) . '" target="_blank" rel="noopener">' . htmlspecialchars($line) . '</a></li>';
+        } else {
+            $out .= '<li>' . htmlspecialchars($line) . '</li>';
+        }
+    }
+    $out .= '</ul>';
+    return $out;
+}
+
+function nl2brEscaped($text) {
+    $text = trim($text);
+    return $text === '' ? '' : nl2br(htmlspecialchars($text), false);
 }
 
 // Transaction summary
@@ -133,6 +219,12 @@ $statusMap = array(
         .stat-number { font-size: 1.6rem; font-weight: 700; color: var(--primary, #731e8a); }
         .table-report th { background: #f1f5f9; font-weight: 600; }
         .section-title-report { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin: 1.5rem 0 .75rem; border-left: 4px solid var(--primary, #731e8a); padding-left: .75rem; }
+        .project-card { page-break-inside: avoid; }
+        .project-card .card-header { border-bottom: 2px solid #e2e8f0 !important; }
+        .report-text { white-space: pre-wrap; font-size: 0.92rem; }
+        @media print {
+            .project-card { break-inside: avoid; margin-bottom: 1rem !important; }
+        }
     </style>
 </head>
 <body>
@@ -281,42 +373,155 @@ $statusMap = array(
                 </div>
 
                 <div class="section-title-report">รายละเอียดโครงการทั้งหมด</div>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-report align-middle">
-                        <thead>
-                            <tr>
-                                <th class="text-center" style="width:40px">#</th>
-                                <th>รหัสโครงการ</th>
-                                <th>ชื่อโครงการ</th>
-                                <th>หน่วยงาน</th>
-                                <th>เจ้าของโครงการ</th>
-                                <th>สถานะ</th>
-                                <th class="text-end">งบจัดสรร</th>
-                                <th class="text-end">เบิกจ่าย</th>
-                                <th class="text-center">%</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($projects as $i => $p): ?>
-                                <?php $pct = (float)$p['budget_allocated'] > 0 ? round(((float)$p['budget_used'] / (float)$p['budget_allocated']) * 100, 1) : 0; ?>
-                                <tr>
-                                    <td class="text-center"><?= $i + 1 ?></td>
-                                    <td><?= htmlspecialchars($p['project_id'] ?: '-') ?></td>
-                                    <td><?= htmlspecialchars($p['title']) ?></td>
-                                    <td><?= htmlspecialchars($p['school_name'] ?: '-') ?></td>
-                                    <td><?= htmlspecialchars($p['owner_name'] ?: '-') ?></td>
-                                    <td><span class="badge <?= isset($statusMap[$p['status']]) ? $statusMap[$p['status']] : 'bg-light text-dark' ?>"><?= htmlspecialchars($p['status'] ?: '-') ?></span></td>
-                                    <td class="text-end"><?= number_format((float)$p['budget_allocated'], 2) ?></td>
-                                    <td class="text-end"><?= number_format((float)$p['budget_used'], 2) ?></td>
-                                    <td class="text-center"><?= $pct ?>%</td>
-                                </tr>
-                            <?php endforeach; ?>
-                            <?php if (empty($projects)): ?>
-                                <tr><td colspan="9" class="text-center text-muted">ไม่มีข้อมูลโครงการ</td></tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                <?php foreach ($projects as $i => $p): ?>
+                    <?php
+                    $pct = (float)$p['budget_allocated'] > 0 ? round(((float)$p['budget_used'] / (float)$p['budget_allocated']) * 100, 1) : 0;
+                    $pid = (int)$p['id'];
+                    $strategies = isset($projectStrategies[$pid]) ? $projectStrategies[$pid] : array();
+                    $kpis = isset($projectKpis[$pid]) ? $projectKpis[$pid] : array();
+                    $okr = isset($projectOkrs[$pid]) ? $projectOkrs[$pid] : '';
+                    $resultStatus = isset($p['result_status']) && trim($p['result_status']) !== '' ? trim($p['result_status']) : '';
+                    ?>
+                    <div class="card border-0 shadow-sm rounded-4 mb-3 project-card">
+                        <div class="card-header bg-white border-0 pt-3 pb-0">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                <div>
+                                    <div class="small text-muted">โครงการที่ <?= $i + 1 ?></div>
+                                    <div class="fw-bold fs-5"><?= htmlspecialchars($p['project_id'] ?: '-') ?> : <?= htmlspecialchars($p['title']) ?></div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge <?= isset($statusMap[$p['status']]) ? $statusMap[$p['status']] : 'bg-light text-dark' ?>"><?= htmlspecialchars($p['status'] ?: '-') ?></span>
+                                    <?php if ($resultStatus !== ''): ?>
+                                        <span class="badge <?= $resultStatus === 'บรรลุ' ? 'bg-success' : ($resultStatus === 'ไม่บรรลุ' ? 'bg-danger' : 'bg-info') ?>"><?= htmlspecialchars($resultStatus) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-4">
+                                <!-- หน่วยงาน / ผู้รับผิดชอบ -->
+                                <div class="col-12 col-md-6">
+                                    <div class="small text-muted mb-1">หน่วยงาน</div>
+                                    <div class="fw-medium"><?= htmlspecialchars($p['school_name'] ?: '-') ?></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="small text-muted mb-1">ผู้รับผิดชอบหลัก</div>
+                                    <div class="fw-medium"><?= htmlspecialchars($p['owner_name'] ?: '-') ?></div>
+                                </div>
+                                <?php if (!empty($p['co_owner'])): ?>
+                                <div class="col-12">
+                                    <div class="small text-muted mb-1">ผู้รับผิดชอบร่วม</div>
+                                    <div><?= htmlspecialchars($p['co_owner']) ?></div>
+                                </div>
+                                <?php endif; ?>
+
+                                <!-- งบประมาณ -->
+                                <div class="col-12">
+                                    <div class="row g-2 p-3 bg-light rounded-3">
+                                        <div class="col-4 text-center border-end">
+                                            <div class="small text-muted">งบประมาณที่ได้รับ</div>
+                                            <div class="fw-bold text-primary"><?= number_format((float)$p['budget_allocated'], 2) ?></div>
+                                        </div>
+                                        <div class="col-4 text-center border-end">
+                                            <div class="small text-muted">งบประมาณที่ใช้ไป</div>
+                                            <div class="fw-bold text-danger"><?= number_format((float)$p['budget_used'], 2) ?></div>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="small text-muted">คิดเป็นร้อยละ</div>
+                                            <div class="fw-bold text-success"><?= $pct ?>%</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ยุทธศาสตร์ / ตัวชี้วัด / OKR -->
+                                <?php if (!empty($strategies) || !empty($kpis) || $okr !== ''): ?>
+                                <div class="col-12">
+                                    <?php if (!empty($strategies)): ?>
+                                        <div class="mb-2">
+                                            <span class="small text-muted">ยุทธศาสตร์:</span>
+                                            <?php foreach ($strategies as $s): ?>
+                                                <span class="badge bg-light text-dark border me-1"><?= htmlspecialchars($s) ?></span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($kpis)): ?>
+                                        <div class="mb-2">
+                                            <span class="small text-muted">ตัวชี้วัด:</span>
+                                            <ul class="d-inline list-inline mb-0">
+                                                <?php foreach ($kpis as $k): ?>
+                                                    <li class="list-inline-item"><span class="badge bg-light text-dark border"><?= htmlspecialchars($k) ?></span></li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($okr !== ''): ?>
+                                        <div>
+                                            <span class="small text-muted">OKR:</span>
+                                            <span><?= nl2brEscaped($okr) ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endif; ?>
+
+                                <!-- สรุปผล / กิจกรรม / ปัญหา -->
+                                <?php if (!empty($p['operation_results'])): ?>
+                                <div class="col-12 col-md-4">
+                                    <div class="small text-muted mb-1">สรุปผลการดำเนินโครงการ</div>
+                                    <div class="report-text"><?= nl2brEscaped($p['operation_results']) ?></div>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($p['operated_activities'])): ?>
+                                <div class="col-12 col-md-4">
+                                    <div class="small text-muted mb-1">กิจกรรมที่ดำเนินการ</div>
+                                    <div class="report-text"><?= nl2brEscaped($p['operated_activities']) ?></div>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($p['problems_suggestions'])): ?>
+                                <div class="col-12 col-md-4">
+                                    <div class="small text-muted mb-1">ปัญหาอุปสรรค / ข้อเสนอแนะ</div>
+                                    <div class="report-text"><?= nl2brEscaped($p['problems_suggestions']) ?></div>
+                                </div>
+                                <?php endif; ?>
+
+                                <!-- รูปภาพ / วิดีโอ / เอกสารรายงาน -->
+                                <?php if (!empty($p['images']) || !empty($p['video_links']) || !empty($p['document_links']) || !empty($p['report_links'])): ?>
+                                <div class="col-12">
+                                    <div class="small text-muted mb-2">เอกสาร/สื่อประกอบ</div>
+                                    <div class="row g-3">
+                                        <?php if (!empty($p['images'])): ?>
+                                        <div class="col-12 col-md-6 col-lg-3">
+                                            <div class="small fw-medium">📷 รูปภาพกิจกรรม</div>
+                                            <?= linesToLinks($p['images']) ?>
+                                        </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($p['video_links'])): ?>
+                                        <div class="col-12 col-md-6 col-lg-3">
+                                            <div class="small fw-medium">🎥 วิดีโอ</div>
+                                            <?= linesToLinks($p['video_links']) ?>
+                                        </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($p['document_links'])): ?>
+                                        <div class="col-12 col-md-6 col-lg-3">
+                                            <div class="small fw-medium">📄 เอกสาร</div>
+                                            <?= linesToLinks($p['document_links']) ?>
+                                        </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($p['report_links'])): ?>
+                                        <div class="col-12 col-md-6 col-lg-3">
+                                            <div class="small fw-medium">📑 รายงาน</div>
+                                            <?= linesToLinks($p['report_links']) ?>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <?php if (empty($projects)): ?>
+                    <div class="alert alert-light text-center">ไม่มีข้อมูลโครงการ</div>
+                <?php endif; ?>
 
                 <?php if ((int)$txSummary['tx_count'] > 0): ?>
                 <div class="section-title-report">สรุปรายการเบิกจ่าย</div>
