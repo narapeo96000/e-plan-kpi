@@ -946,7 +946,14 @@ function filterKpis() {
         total++;
         const strat = parseInt(item.getAttribute('data-strategy'), 10) || 0;
         const checked = item.querySelector('.kpi-check') ? item.querySelector('.kpi-check').checked : false;
-        const show = checked || selected.length === 0 || strat === 0 || selected.indexOf(strat) !== -1;
+        let show = false;
+        if (selected.length === 0) {
+            show = true;
+        } else if (checked) {
+            show = true;
+        } else if (strat > 0 && selected.indexOf(strat) !== -1) {
+            show = true;
+        }
         item.style.display = show ? '' : 'none';
         if (show) visible++;
     });
@@ -955,7 +962,7 @@ function filterKpis() {
         if (selected.length === 0) {
             hint.textContent = 'แสดง KPI ทั้งหมด ' + total + ' รายการ — เลือกยุทธศาสตร์ด้านบนเพื่อกรอง';
         } else {
-            hint.textContent = 'แสดง KPI ' + visible + '/' + total + ' รายการ ที่สอดคล้องกับยุทธศาสตร์ที่เลือก (รวมที่เลือกไว้แล้ว)';
+            hint.textContent = 'แสดง KPI ' + visible + '/' + total + ' รายการ ที่สอดคล้องกับยุทธศาสตร์ที่เลือก';
         }
     }
 }
@@ -991,6 +998,24 @@ function hasStrategySelected() {
 function submitForm() {
     if (!hasStrategySelected()) {
         alert('กรุณาเลือกยุทธศาสตร์อย่างน้อย 1 ยุทธศาสตร์');
+        return;
+    }
+    const selectedStrats = [];
+    document.querySelectorAll('input[name="strategic_issues[]"]:checked').forEach(function (c) {
+        selectedStrats.push(parseInt(c.value, 10));
+    });
+    const invalidKpis = [];
+    document.querySelectorAll('input[name="kpi_ids[]"]:checked').forEach(function (c) {
+        const item = c.closest('.kpi-item');
+        if (item) {
+            const strat = parseInt(item.getAttribute('data-strategy'), 10) || 0;
+            if (strat > 0 && selectedStrats.indexOf(strat) === -1) {
+                invalidKpis.push(c.parentElement.querySelector('.fw-semibold').textContent.trim());
+            }
+        }
+    });
+    if (invalidKpis.length > 0) {
+        alert('KPI ที่เลือกไม่สอดคล้องกับยุทธศาสตร์ที่เลือก:\n- ' + invalidKpis.join('\n- ') + '\n\nกรุณายกเลิก KPI เหล่านี้ หรือเลือกยุทธศาสตร์ที่สอดคล้อง');
         return;
     }
     document.getElementById('projectForm').submit();
