@@ -9,6 +9,15 @@
 - ทดสอบบน server: ดาวน์โหลดเอกสาร id=1 สองครั้ง → แสดง "2 ครั้ง" ถูกต้อง
 - Deploy ขึ้น server แล้ว: `download_docs.php`, `migration_upgrade.sql`
 
+## 2026-08-10 — เพิ่มหน้า "รายงานแบบเต็มรูปแบบ" (preview ก่อนพิมพ์ / ส่งออก PDF)
+- สร้าง `full_report.php`: รายงานเต็มรูปแบบที่รวมสรุปผลงาน สถานะโครงการ สรุปตามหน่วยงาน และรายละเอียดโครงการทั้งหมดในหน้าเดียว
+- รองรับตัวกรองปีงบประมาณ + ขอบเขตตามสิทธิ์ (admin/plan เห็นทุกหน่วยงาน, office/user เห็นหน่วยงานตนเอง)
+- มีปุ่ม "🖨️ พิมพ์ / Print Preview" เรียก `window.print()` และลิงก์ "📤 ส่งออก PDF" ไปยัง `export_pdf.php`
+- CSS print-friendly: ซ่อน sidebar/header/UI controls เมื่อพิมพ์, แสดงเฉพาะเนื้อหารายงาน
+- `menu.php`: เพิ่มเมนู "📑 รายงานแบบเต็มรูปแบบ" ใต้ "รายงาน & ส่งออก" (sidebar + mobile)
+- ทดสอตบน server: โหลดหน้า `full_report.php?year=2569` สำเร็จ, แสดงข้อมูลครบ, ปุ่ม print/PDF ทำงาน
+- Deploy ขึ้น server แล้ว: `full_report.php`, `menu.php`
+
 ## 2026-08-10 — ตัดช่อง "สรุปผลการดำเนินโครงการ" ที่ซ้ำออกจาก project_form.php
 - `project_form.php`: ลบ textarea `operation_results` ที่ซ้ำ (ช่องที่ 2) ในหมวด "ผลการดำเนินงาน" เหลือเพียงช่องเดียว
 - ตรวจสอบบน server: project_form.php?id=97 แสดง label "สรุปผลการดำเนินโครงการ" เพียง 1 อัน + textarea 1 อัน

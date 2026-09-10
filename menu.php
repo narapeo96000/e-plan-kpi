@@ -195,7 +195,7 @@ function navParentShow($pages) {
 
       <!-- Reports -->
       <li class="sidebar-item has-sub">
-        <a class="sidebar-link <?= navParentActive(array('report', 'export_excel', 'export_pdf')) ?>" href="javascript:void(0)" onclick="toggleSidebarSub(this)">
+        <a class="sidebar-link <?= navParentActive(array('report', 'full_report', 'export_excel', 'export_pdf')) ?>" href="javascript:void(0)" onclick="toggleSidebarSub(this)">
           <span class="sidebar-icon">📈</span>
           <span class="sidebar-text">รายงาน & ส่งออก</span>
           <span class="sidebar-arrow ms-auto">
@@ -204,9 +204,10 @@ function navParentShow($pages) {
             </svg>
           </span>
         </a>
-        <div class="sidebar-sub <?= navParentShow(array('report', 'export_excel', 'export_pdf')) ?>" id="reportSub">
+        <div class="sidebar-sub <?= navParentShow(array('report', 'full_report', 'export_excel', 'export_pdf')) ?>" id="reportSub">
           <ul>
             <li><a class="<?= navActive('report') ?>" href="report.php">📄 สรุปรายงานประจำปี</a></li>
+            <li><a class="<?= navActive('full_report') ?>" href="full_report.php">📑 รายงานแบบเต็มรูปแบบ</a></li>
             <li><a class="<?= navActive('export_excel') ?>" href="export_excel.php">📤 ส่งออก Excel</a></li>
             <li><a class="<?= navActive('export_pdf') ?>" href="export_pdf.php">📤 ส่งออก PDF</a></li>
           </ul>
@@ -401,13 +402,14 @@ function navParentShow($pages) {
 
       <!-- Reports -->
       <li class="mobile-nav-item has-sub">
-        <a class="mobile-nav-link <?= navParentActive(array('report', 'export_excel', 'export_pdf')) ?>" href="#mReportSub" data-bs-toggle="collapse">
+        <a class="mobile-nav-link <?= navParentActive(array('report', 'full_report', 'export_excel', 'export_pdf')) ?>" href="#mReportSub" data-bs-toggle="collapse">
           <span>📈</span> รายงาน & ส่งออก
           <span class="arrow ms-auto">▼</span>
         </a>
-        <div class="collapse <?= navParentShow(array('report', 'export_excel', 'export_pdf')) ?>" id="mReportSub">
+        <div class="collapse <?= navParentShow(array('report', 'full_report', 'export_excel', 'export_pdf')) ?>" id="mReportSub">
           <ul>
             <li><a class="<?= navActive('report') ?>" href="report.php">📄 สรุปรายงานประจำปี</a></li>
+            <li><a class="<?= navActive('full_report') ?>" href="full_report.php">📑 รายงานแบบเต็มรูปแบบ</a></li>
             <li><a class="<?= navActive('export_excel') ?>" href="export_excel.php">📤 ส่งออก Excel</a></li>
             <li><a class="<?= navActive('export_pdf') ?>" href="export_pdf.php">📤 ส่งออก PDF</a></li>
           </ul>
