@@ -5,6 +5,7 @@ requireLogin();
 $fiscalYear = !empty($fiscal_year) ? $fiscal_year : date('Y') + 543;
 $filterYear = isset($_GET['year']) ? trim($_GET['year']) : $fiscalYear;
 $escapedYear = $conn->real_escape_string($filterYear);
+$isPreview = isset($_GET['preview']) && $_GET['preview'] == '1';
 
 // Scope: admin/plan see all, office/user see own agency only
 $agencyScope = '';
@@ -199,7 +200,7 @@ $statusMap = array(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายงานแบบเต็มรูปแบบ | <?= htmlspecialchars($office_name) ?></title>
+    <title><?= $isPreview ? 'ตัวอย่างก่อนพิมพ์' : 'รายงานแบบเต็มรูปแบบ' ?> | <?= htmlspecialchars($office_name) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -222,24 +223,32 @@ $statusMap = array(
         .project-card { page-break-inside: avoid; }
         .project-card .card-header { border-bottom: 2px solid #e2e8f0 !important; }
         .report-text { white-space: pre-wrap; font-size: 0.92rem; }
+        .preview-banner { background: #fff7ed; border: 1px dashed #f97316; color: #9a3412; border-radius: .75rem; }
+        body.preview-mode .main-content { margin-left: 0 !important; padding-top: 1rem !important; }
         @media print {
             .project-card { break-inside: avoid; margin-bottom: 1rem !important; }
+            .preview-banner { display: none !important; }
         }
     </style>
 </head>
-<body>
-<?php $activePage = 'full_report'; include __DIR__ . '/menu.php'; ?>
+<body class="<?= $isPreview ? 'preview-mode' : '' ?>">
+<?php if (!$isPreview): ?>
+    <?php $activePage = 'full_report'; include __DIR__ . '/menu.php'; ?>
+<?php else: ?>
+    <main class="main-content">
+<?php endif; ?>
     <div class="container-fluid">
+        <?php if (!$isPreview): ?>
         <div class="card border-0 shadow-sm rounded-4 mb-4 no-print">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                     <div>
-                        <div class="text-uppercase section-title mb-2">📄 Full Report Preview</div>
+                        <div class="text-uppercase section-title mb-2">📄 Full Report</div>
                         <h1 class="h3 fw-bold mb-2">รายงานแบบเต็มรูปแบบ</h1>
                         <p class="text-muted mb-0">ดูตัวอย่างก่อนพิมพ์ หรือส่งออก PDF</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-outline-secondary" onclick="window.print()">🖨️ พิมพ์ / Print Preview</button>
+                        <a class="btn btn-outline-secondary" href="full_report.php?preview=1&year=<?= urlencode($filterYear) ?>" target="_blank">🖨️ ตัวอย่างก่อนพิมพ์</a>
                         <a class="btn btn-danger" href="export_pdf.php?year=<?= urlencode($filterYear) ?>">📤 ส่งออก PDF</a>
                     </div>
                 </div>
@@ -264,6 +273,22 @@ $statusMap = array(
                 </form>
             </div>
         </div>
+        <?php else: ?>
+        <div class="card border-0 shadow-sm rounded-4 mb-4 preview-banner no-print">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <strong>🖨️ หน้าตัวอย่างก่อนพิมพ์</strong>
+                        <div class="small">ตรวจสอบเนื้อหาด้านล่างให้ถูกต้อง จากนั้นกดปุ่มพิมพ์</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" onclick="window.print()">🖨️ พิมพ์</button>
+                        <a class="btn btn-outline-secondary" href="full_report.php?year=<?= urlencode($filterYear) ?>">ย้อนกลับ</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body p-4">

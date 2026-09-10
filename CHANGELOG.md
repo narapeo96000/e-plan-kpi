@@ -9,6 +9,14 @@
 - ทดสอบบน server: ดาวน์โหลดเอกสาร id=1 สองครั้ง → แสดง "2 ครั้ง" ถูกต้อง
 - Deploy ขึ้น server แล้ว: `download_docs.php`, `migration_upgrade.sql`
 
+## 2026-08-10 — ปรับปุ่มพิมพ์ให้แสดงหน้า preview ก่อนพิมพ์
+- `full_report.php` รองรับโหมด `?preview=1` สำหรับแสดงหน้าตัวอย่างก่อนพิมพ์
+- หน้าปกติ: ปุ่ม "🖨️ ตัวอย่างก่อนพิมพ์" เปิด `full_report.php?preview=1` ในแท็บใหม่
+- หน้า preview: ซ่อน sidebar/menu/UI controls, แสดง banner "หน้าตัวอย่างก่อนพิมพ์" + ปุ่ม "พิมพ์" (`window.print()`) + ปุ่ม "ย้อนกลับ"
+- CSS ปรับ `.main-content` ให้เต็มจอใน preview mode + ซ่อน banner ตอนพิมพ์
+- ทดสอบบน server: ปุ่ม preview เปิดหน้าใหม่ถูกต้อง, หน้า preview แสดงครบ, ไม่มี sidebar
+- Deploy ขึ้น server แล้ว: `full_report.php`
+
 ## 2026-08-10 — รายงานแบบเต็มรูปแบบแสดงรายละเอียดโครงการครบถ้วน
 - ปรับ `full_report.php`: แต่ละโครงการแสดงเป็น card ประกอบด้วย
   - รหัสโครงการ / ชื่อโครงการ / สถานะ / ผลบรรลุ
